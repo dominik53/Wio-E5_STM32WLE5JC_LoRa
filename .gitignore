@@ -1,0 +1,30 @@
+# STM32CubeIDE build files
+Debug/
+Release/
+*.launch
+*.log
+*.bin
+*.hex
+*.elf
+*.map
+*.o
+*.d
+*.lst
+*.srec
+
+# User-specific files
+*.swp
+*.swo
+*.swn
+*.DS_Store
+
+# CubeMX generated backups
+*.ioc_backup
+
+# IDE metadata
+.cproject
+.project
+.settings/
+
+notes.txt
+secrets.txt
