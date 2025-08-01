@@ -55,13 +55,22 @@ typedef enum
 	STATE_END_CONFIGURATIONS
 } SubGhz_State_t;
 
+typedef enum
+{
+	NO_ERROR = 0,		// no error
+	ERROR_TIMEOUT_TX,	// timeout tx
+	ERROR_TIMEOUT_RX,	// timeout rx
+	ERROR_RX,			// error rx, for example wrong crc
+	ERROR_PAYLOAD		// data received not the same as transmitted
+} Error_Code_t;
+
 typedef struct
 {
 	uint32_t RoundTripTime; // could be cast to uint16_t == up to 65535 ms
 	int16_t RssiValue; /* Last  Received packer Rssi*/
 	int8_t SnrValue; /* Last  Received packer SNR (in Lora modulation)*/
 	uint16_t TxBitRate; // equals: PayloadLen / TxTime
-	uint8_t ErrorCode;	/* 0 - no error, 1 - timeout tx, 2 - timeout rx, 3 - error rx, 4 - data received not the same as transmitted */
+	Error_Code_t ErrorCode;	/* 0 - , 1 - , 2 - , 3 - , 4 -  */
 
 } SubGhz_Measurements_t;	// last received data
 
@@ -118,8 +127,11 @@ static const uint8_t txMessage[MAX_PAYLOAD_LEN] =
 	{"Moja wiadomosc do przeprowadzania testow konfiguracji lora, ta wiadomosc jest przesylana z nadajnika do odbiornika i spowrotem jako echo w celu zbadania Round Trip Time. Dzieki temu w nadajniku mozliwe jest zbieranie danych wlasciwych dla nadajnika i odb"};
 
 static uint32_t txTimestamp = 0; /* transmitted timestamp */
+
+#if LORA_DIRECTION == LORA_TRANSMITER // for no warning messages
 static uint32_t txTimestampEnd = 0; /* end of transmition timestamp */
 static uint32_t rxTimestamp = 0; /* received timestamp */
+#endif
 
 static uint8_t ConfigurationNum = 0; // which LoRa configuration is tested now
 static uint8_t MeasurementNum = 0; // which configurations measurement is tested now
@@ -324,8 +336,7 @@ static void OnTxTimeout(void)
 	APP_LOG(TS_ON, VLEVEL_L, "OnTxTimeout\n\r");
 
 #if LORA_DIRECTION == LORA_TRANSMITER
-	Collection[ConfigurationNum].Measurements[MeasurementNum].ErrorCode =
-			(uint8_t) 1;
+	Collection[ConfigurationNum].Measurements[MeasurementNum].ErrorCode = ERROR_TIMEOUT_TX;
 
 	State = STATE_NEXT_MEASUREMENT;
 #elif LORA_DIRECTION == LORA_RECEIVER
@@ -345,8 +356,7 @@ static void OnRxTimeout(void)
 	APP_LOG(TS_ON, VLEVEL_L, "OnRxTimeout\n\r");
 
 #if LORA_DIRECTION == LORA_TRANSMITER
-	Collection[ConfigurationNum].Measurements[MeasurementNum].ErrorCode =
-			(uint8_t) 2;
+	Collection[ConfigurationNum].Measurements[MeasurementNum].ErrorCode = ERROR_TIMEOUT_RX;
 
 	State = STATE_NEXT_MEASUREMENT;
 #elif LORA_DIRECTION == LORA_RECEIVER
@@ -366,8 +376,7 @@ static void OnRxError(void)
 	APP_LOG(TS_ON, VLEVEL_L, "OnRxError\n\r");
 
 #if LORA_DIRECTION == LORA_TRANSMITER
-	Collection[ConfigurationNum].Measurements[MeasurementNum].ErrorCode =
-			(uint8_t) 3;
+	Collection[ConfigurationNum].Measurements[MeasurementNum].ErrorCode = ERROR_RX;
 
 	State = STATE_NEXT_MEASUREMENT;
 #elif LORA_DIRECTION == LORA_RECEIVER
@@ -487,8 +496,7 @@ static void Communication_Process(void) // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 
 			}
 			else
 			{
-				Collection[ConfigurationNum].Measurements[MeasurementNum].ErrorCode =
-						(uint8_t) 4;
+				Collection[ConfigurationNum].Measurements[MeasurementNum].ErrorCode = ERROR_PAYLOAD;
 			}
 
 			memset(BufferRx, 0, MAX_APP_BUFFER_SIZE);
