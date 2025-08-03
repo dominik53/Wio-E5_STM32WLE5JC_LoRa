@@ -49,7 +49,7 @@ extern "C" {
 #define TX_OUTPUT_POWER                             14 // max of the Wio-E5 LE module [dBm]
 #endif /* TX_OUTPUT_POWER */
 
-#define CONFIGURATIONS_NUM									12	// 1 - 12 how many LoRa configurations there are
+#define CONFIGURATIONS_NUM									3	// 1 - 12 how many LoRa configurations there are
 #define MEASUREMENTS_NUM									50	// po 10 pomiarow - ok 3min, zdecydowano na 50 bo sama komunikacja trwa wtedy 15 min w jednym miejscu, how many repetitions for collecting data for 1 configuration
 
 #if (( USE_MODEM_LORA == 1 ) && ( USE_MODEM_FSK == 0 ))

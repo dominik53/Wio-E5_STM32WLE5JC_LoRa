@@ -574,21 +574,21 @@ static void Communication_Process(void) // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 
 }
 
 
-static void SetLoRaConfiguration(uint8_t NewConfigurationNum)
+static void SetLoRaConfiguration(uint8_t NewConfigurationNum) // todo zmienic konfiguracje i pomyslec czy reszta zostaje bez zmian np czy dodac obsluge zmiany konfiguracji
 {
 	printf("New configuration number: %u\n\r", (ConfigurationNum + 1));
 
 	switch (NewConfigurationNum)
 	{
 	case 0:
-		LoRa.LORA_BANDWIDTH = 0;
+		LoRa.LORA_BANDWIDTH = 1;
 		LoRa.LORA_SPREADING_FACTOR = 7;
 		LoRa.LORA_CODINGRATE = 1;
 		LoRa.LORA_PREAMBLE_LENGTH = 8;
 		LoRa.LORA_SYMBOL_TIMEOUT = 5;
 		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
 		LoRa.LORA_IQ_INVERSION_ON = false;
-		LoRa.PAYLOAD_LEN = 64;
+		LoRa.PAYLOAD_LEN = 255;
 		LoRa.TX_TIMEOUT_VALUE = 15000;
 		break;
 
@@ -600,110 +600,14 @@ static void SetLoRaConfiguration(uint8_t NewConfigurationNum)
 		LoRa.LORA_SYMBOL_TIMEOUT = 5;
 		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
 		LoRa.LORA_IQ_INVERSION_ON = false;
-		LoRa.PAYLOAD_LEN = 64;
+		LoRa.PAYLOAD_LEN = 8;
 		LoRa.TX_TIMEOUT_VALUE = 15000;
 		break;
 
 	case 2:
 		LoRa.LORA_BANDWIDTH = 0;
-		LoRa.LORA_SPREADING_FACTOR = 8;
-		LoRa.LORA_CODINGRATE = 1;
-		LoRa.LORA_PREAMBLE_LENGTH = 8;
-		LoRa.LORA_SYMBOL_TIMEOUT = 5;
-		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
-		LoRa.LORA_IQ_INVERSION_ON = false;
-		LoRa.PAYLOAD_LEN = 64;
-		LoRa.TX_TIMEOUT_VALUE = 15000;
-		break;
-
-	case 3:
-		LoRa.LORA_BANDWIDTH = 0;
-		LoRa.LORA_SPREADING_FACTOR = 9;
-		LoRa.LORA_CODINGRATE = 1;
-		LoRa.LORA_PREAMBLE_LENGTH = 8;
-		LoRa.LORA_SYMBOL_TIMEOUT = 5;
-		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
-		LoRa.LORA_IQ_INVERSION_ON = false;
-		LoRa.PAYLOAD_LEN = 64;
-		LoRa.TX_TIMEOUT_VALUE = 15000;
-		break;
-
-	case 4:
-		LoRa.LORA_BANDWIDTH = 0;
-		LoRa.LORA_SPREADING_FACTOR = 10;
-		LoRa.LORA_CODINGRATE = 1;
-		LoRa.LORA_PREAMBLE_LENGTH = 8;
-		LoRa.LORA_SYMBOL_TIMEOUT = 5;
-		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
-		LoRa.LORA_IQ_INVERSION_ON = false;
-		LoRa.PAYLOAD_LEN = 64;
-		LoRa.TX_TIMEOUT_VALUE = 15000;
-		break;
-
-	case 5:
-		LoRa.LORA_BANDWIDTH = 0;
-		LoRa.LORA_SPREADING_FACTOR = 11;
-		LoRa.LORA_CODINGRATE = 1;
-		LoRa.LORA_PREAMBLE_LENGTH = 8;
-		LoRa.LORA_SYMBOL_TIMEOUT = 5;
-		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
-		LoRa.LORA_IQ_INVERSION_ON = false;
-		LoRa.PAYLOAD_LEN = 64;
-		LoRa.TX_TIMEOUT_VALUE = 15000;
-		break;
-
-	case 6:
-		LoRa.LORA_BANDWIDTH = 0;
 		LoRa.LORA_SPREADING_FACTOR = 12;
-		LoRa.LORA_CODINGRATE = 1;
-		LoRa.LORA_PREAMBLE_LENGTH = 8;
-		LoRa.LORA_SYMBOL_TIMEOUT = 5;
-		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
-		LoRa.LORA_IQ_INVERSION_ON = false;
-		LoRa.PAYLOAD_LEN = 64;
-		LoRa.TX_TIMEOUT_VALUE = 15000;
-		break;
-
-	case 7:
-		LoRa.LORA_BANDWIDTH = 0;
-		LoRa.LORA_SPREADING_FACTOR = 7;
-		LoRa.LORA_CODINGRATE = 2;
-		LoRa.LORA_PREAMBLE_LENGTH = 8;
-		LoRa.LORA_SYMBOL_TIMEOUT = 5;
-		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
-		LoRa.LORA_IQ_INVERSION_ON = false;
-		LoRa.PAYLOAD_LEN = 64;
-		LoRa.TX_TIMEOUT_VALUE = 15000;
-		break;
-
-	case 8:
-		LoRa.LORA_BANDWIDTH = 0;
-		LoRa.LORA_SPREADING_FACTOR = 7;
-		LoRa.LORA_CODINGRATE = 3;
-		LoRa.LORA_PREAMBLE_LENGTH = 8;
-		LoRa.LORA_SYMBOL_TIMEOUT = 5;
-		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
-		LoRa.LORA_IQ_INVERSION_ON = false;
-		LoRa.PAYLOAD_LEN = 64;
-		LoRa.TX_TIMEOUT_VALUE = 15000;
-		break;
-
-	case 9:
-		LoRa.LORA_BANDWIDTH = 0;
-		LoRa.LORA_SPREADING_FACTOR = 7;
 		LoRa.LORA_CODINGRATE = 4;
-		LoRa.LORA_PREAMBLE_LENGTH = 8;
-		LoRa.LORA_SYMBOL_TIMEOUT = 5;
-		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
-		LoRa.LORA_IQ_INVERSION_ON = false;
-		LoRa.PAYLOAD_LEN = 64;
-		LoRa.TX_TIMEOUT_VALUE = 15000;
-		break;
-
-	case 10:
-		LoRa.LORA_BANDWIDTH = 0;
-		LoRa.LORA_SPREADING_FACTOR = 7;
-		LoRa.LORA_CODINGRATE = 1;
 		LoRa.LORA_PREAMBLE_LENGTH = 8;
 		LoRa.LORA_SYMBOL_TIMEOUT = 5;
 		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
@@ -712,30 +616,9 @@ static void SetLoRaConfiguration(uint8_t NewConfigurationNum)
 		LoRa.TX_TIMEOUT_VALUE = 15000;
 		break;
 
-	case 11:
-		LoRa.LORA_BANDWIDTH = 0;
-		LoRa.LORA_SPREADING_FACTOR = 7;
-		LoRa.LORA_CODINGRATE = 1;
-		LoRa.LORA_PREAMBLE_LENGTH = 8;
-		LoRa.LORA_SYMBOL_TIMEOUT = 5;
-		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
-		LoRa.LORA_IQ_INVERSION_ON = false;
-		LoRa.PAYLOAD_LEN = 255;
-		LoRa.TX_TIMEOUT_VALUE = 15000;
-		break;
-
 	default:
-		printf("Exceeded configuration limit!\n\r");
-		LoRa.LORA_BANDWIDTH = 0;
-		LoRa.LORA_SPREADING_FACTOR = 7;
-		LoRa.LORA_CODINGRATE = 1;
-		LoRa.LORA_PREAMBLE_LENGTH = 8;
-		LoRa.LORA_SYMBOL_TIMEOUT = 5;
-		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
-		LoRa.LORA_IQ_INVERSION_ON = false;
-		LoRa.PAYLOAD_LEN = 64;
-		LoRa.TX_TIMEOUT_VALUE = 15000;
-		break;
+		printf("Soft error, exceeded configuration limit!\n\r");
+		return;
 	}
 
 	Radio.SetTxConfig(MODEM_LORA, TX_OUTPUT_POWER, 0, LoRa.LORA_BANDWIDTH,
