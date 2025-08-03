@@ -23,6 +23,7 @@
 #include "radio_conf.h"
 #include "radio_driver.h"
 #include "mw_log_conf.h"
+#include "sys_app.h"
 
 /* External variables --------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
@@ -257,6 +258,7 @@ static void RFW_GetPayload( uint8_t Offset, uint8_t Length );
 int32_t RFW_TransmitLongPacket( uint16_t payload_size, uint32_t timeout,
                                 void ( *TxLongPacketGetNextChunkCb )( uint8_t **buffer, uint8_t buffer_size ) )
 {
+	APP_LOG(TS_OFF, VLEVEL_H, "****************************** TRANSMIT LONG PACKET ******************************\r\n");
     int32_t status = 0;
 #if (RFW_LONGPACKET_ENABLE == 1 )
     uint32_t total_size = payload_size + RFWPacket.Init.PayloadLengthFieldSize + RFWPacket.Init.CrcFieldSize;

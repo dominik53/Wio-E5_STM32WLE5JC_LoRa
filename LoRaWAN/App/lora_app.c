@@ -68,10 +68,6 @@ typedef enum TxEventType_e
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
-/**
-  * LEDs period value of the timer in ms
-  */
-#define LED_PERIOD_TIME 500
 
 /**
   * Join switch period value of the timer in ms
@@ -216,24 +212,6 @@ static void OnSystemReset(void);
 
 /* USER CODE BEGIN PFP */
 
-/**
-  * @brief  LED Tx timer callback function
-  * @param  context ptr of LED context
-  */
-static void OnTxTimerLedEvent(void *context);
-
-/**
-  * @brief  LED Rx timer callback function
-  * @param  context ptr of LED context
-  */
-static void OnRxTimerLedEvent(void *context);
-
-/**
-  * @brief  LED Join timer callback function
-  * @param  context ptr of LED context
-  */
-static void OnJoinTimerLedEvent(void *context);
-
 /* USER CODE END PFP */
 
 /* Private variables ---------------------------------------------------------*/
@@ -318,26 +296,6 @@ static uint8_t AppDataBuffer[LORAWAN_APP_DATA_BUFFER_MAX_SIZE];
   */
 static LmHandlerAppData_t AppData = { 0, 0, AppDataBuffer };
 
-/**
-  * @brief Specifies the state of the application LED
-  */
-static uint8_t AppLedStateOn = RESET;
-
-/**
-  * @brief Timer to handle the application Tx Led to toggle
-  */
-static UTIL_TIMER_Object_t TxLedTimer;
-
-/**
-  * @brief Timer to handle the application Rx Led to toggle
-  */
-static UTIL_TIMER_Object_t RxLedTimer;
-
-/**
-  * @brief Timer to handle the application Join Led to toggle
-  */
-static UTIL_TIMER_Object_t JoinLedTimer;
-
 /* USER CODE END PV */
 
 /* Exported functions ---------------------------------------------------------*/
@@ -386,10 +344,6 @@ void LoRaWAN_Init(void)
           (uint8_t)(feature_version >> 8),
           (uint8_t)(feature_version));
 
-  UTIL_TIMER_Create(&TxLedTimer, LED_PERIOD_TIME, UTIL_TIMER_ONESHOT, OnTxTimerLedEvent, NULL);
-  UTIL_TIMER_Create(&RxLedTimer, LED_PERIOD_TIME, UTIL_TIMER_ONESHOT, OnRxTimerLedEvent, NULL);
-  UTIL_TIMER_Create(&JoinLedTimer, LED_PERIOD_TIME, UTIL_TIMER_PERIODIC, OnJoinTimerLedEvent, NULL);
-
   if (FLASH_IF_Init(NULL) != FLASH_IF_OK)
   {
     Error_Handler();
@@ -414,7 +368,6 @@ void LoRaWAN_Init(void)
   LmHandlerConfigure(&LmHandlerParams);
 
   /* USER CODE BEGIN LoRaWAN_Init_2 */
-  UTIL_TIMER_Start(&JoinLedTimer);
 
   /* USER CODE END LoRaWAN_Init_2 */
 
@@ -584,7 +537,7 @@ static void SendTxData(void)
     temperature = (int16_t)(sensor_data.temperature);
     pressure = (uint16_t)(sensor_data.pressure * 100 / 10); /* in hPa / 10 */
 
-    AppData.Buffer[i++] = AppLedStateOn;
+    AppData.Buffer[i++] = 0u;
     AppData.Buffer[i++] = (uint8_t)((pressure >> 8) & 0xFF);
     AppData.Buffer[i++] = (uint8_t)(pressure & 0xFF);
     AppData.Buffer[i++] = (uint8_t)(temperature & 0xFF);
@@ -658,20 +611,6 @@ static void OnTxTimerEvent(void *context)
 }
 
 /* USER CODE BEGIN PrFD_LedEvents */
-static void OnTxTimerLedEvent(void *context)
-{
-
-}
-
-static void OnRxTimerLedEvent(void *context)
-{
-
-}
-
-static void OnJoinTimerLedEvent(void *context)
-{
-
-}
 
 /* USER CODE END PrFD_LedEvents */
 

@@ -39,6 +39,7 @@
 #include "radio_driver.h"
 #include "radio_conf.h"
 #include "mw_log_conf.h"
+#include "sys_app.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /*!
@@ -1057,9 +1058,13 @@ static void RadioSetTxConfig( RadioModems_t modem, int8_t power, uint32_t fdev,
     SubgRf.lr_fhss.is_lr_fhss_on = false;
 #endif /* RADIO_LR_FHSS_IS_ON == 1 */
     RFW_DeInit();
+
+    APP_LOG(TS_OFF, VLEVEL_H, "****************************** TX CONFIG SET, power: %u ******************************\r\n", power);
+
     switch( modem )
     {
         case MODEM_FSK:
+        	APP_LOG(TS_OFF, VLEVEL_H, "****************************** TX CONFIG SET - MODEM FSK ******************************\r\n");
             SubgRf.ModulationParams.PacketType = PACKET_TYPE_GFSK;
             SubgRf.ModulationParams.Params.Gfsk.BitRate = datarate;
 
@@ -1093,6 +1098,7 @@ static void RadioSetTxConfig( RadioModems_t modem, int8_t power, uint32_t fdev,
             break;
 
         case MODEM_LORA:
+        	APP_LOG(TS_OFF, VLEVEL_H, "****************************** TX CONFIG SET - MODEM LORA ******************************\r\n");
             SubgRf.ModulationParams.PacketType = PACKET_TYPE_LORA;
             SubgRf.ModulationParams.Params.LoRa.SpreadingFactor = ( RadioLoRaSpreadingFactors_t ) datarate;
             SubgRf.ModulationParams.Params.LoRa.Bandwidth =  Bandwidths[bandwidth];
@@ -1310,6 +1316,7 @@ static uint32_t RadioTimeOnAir( RadioModems_t modem, uint32_t bandwidth,
 
 static radio_status_t RadioSend( uint8_t *buffer, uint8_t size )
 {
+	APP_LOG(TS_OFF, VLEVEL_H, "****************************** RADIO SEND, buffer: %u%u%u%u%u%u%u%u ******************************\r\n", buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7]);
     SUBGRF_SetDioIrqParams( IRQ_TX_DONE | IRQ_RX_TX_TIMEOUT | IRQ_TX_DBG,
                             IRQ_TX_DONE | IRQ_RX_TX_TIMEOUT | IRQ_TX_DBG,
                             IRQ_RADIO_NONE,
