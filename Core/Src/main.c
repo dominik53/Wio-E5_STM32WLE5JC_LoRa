@@ -8,7 +8,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "app_subghz_phy.h"
+#include "dma.h"
+#include "app_lorawan.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -83,9 +84,11 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_LoRaWAN_Init();
   /* USER CODE BEGIN 2 */
   	MX_RTC_Init();
-	MX_SubGHz_Phy_Init();
+//	MX_SubGHz_Phy_Init();
 	MX_USART1_UART_Init();
 	MX_SUBGHZ_Init();
 
@@ -96,9 +99,16 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	while (1)
 	{
-		//	while (1) { HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET); }
+//		while (1)
+//		{
+//			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET); // LED off
+//			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET); // LED on
+//			HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_5);
+//			HAL_Delay(1000);
+//		}
+
     /* USER CODE END WHILE */
-    MX_SubGHz_Phy_Process();
+    MX_LoRaWAN_Process();
 
     /* USER CODE BEGIN 3 */
 	}
