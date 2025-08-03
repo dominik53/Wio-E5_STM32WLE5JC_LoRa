@@ -16,12 +16,13 @@
 
 /************ APP CONFIGURATION ************/
 /*******************************************/
-#define LORA_DIRECTION LORA_TRANSMITER
+#define LORA_DIRECTION LORA_RECEIVER
 
 
 
 
 #define APP_LOG_ENABLED	1
+#define DEBUG_LORA		1
 
 /*******************************************/
 /*******************************************/

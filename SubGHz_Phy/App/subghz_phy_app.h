@@ -28,7 +28,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "app_config.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -43,7 +43,11 @@ extern "C" {
 #define USE_MODEM_LORA  1
 #define USE_MODEM_FSK   0
 
+#if DEBUG_LORA == 1
+#define RF_FREQUENCY                                868100000
+#else
 #define RF_FREQUENCY                                869525000 // EU standards, 10% duty cycle, 24 dBm max (in my case 14+2), middle of 869.4–869.65[Hz] so BW=250 is ok
+#endif
 
 #ifndef TX_OUTPUT_POWER
 #define TX_OUTPUT_POWER                             14 // max of the Wio-E5 LE module [dBm]
