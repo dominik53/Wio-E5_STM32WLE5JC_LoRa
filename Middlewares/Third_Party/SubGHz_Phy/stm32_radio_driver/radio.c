@@ -1316,7 +1316,22 @@ static uint32_t RadioTimeOnAir( RadioModems_t modem, uint32_t bandwidth,
 
 static radio_status_t RadioSend( uint8_t *buffer, uint8_t size )
 {
-	APP_LOG(TS_OFF, VLEVEL_H, "****************************** RADIO SEND, buffer: %u%u%u%u%u%u%u%u ******************************\r\n", buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7]);
+	APP_LOG(TS_OFF, VLEVEL_H, "****************************** RADIO SEND, size: %u ******************************\r\n", size);
+	HAL_Delay(10);
+	printf("Buffer content:\r\n");
+	HAL_Delay(10);
+
+	for (uint16_t i = 0; i < size; i++)
+	{
+		HAL_Delay(3);
+		printf("%02X ", buffer[i]);
+		if ((i + 1) % 16 == 0)
+		{
+			printf("\r\n");
+		}
+	}
+	printf("\r\n");
+
     SUBGRF_SetDioIrqParams( IRQ_TX_DONE | IRQ_RX_TX_TIMEOUT | IRQ_TX_DBG,
                             IRQ_TX_DONE | IRQ_RX_TX_TIMEOUT | IRQ_TX_DBG,
                             IRQ_RADIO_NONE,
