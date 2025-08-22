@@ -58,7 +58,7 @@ extern "C" {
  *        - 0x01000400: Link Layer TS001-1.0.4 + Regional Parameters RP002-1.0.1
  *        - 0x01010100: soon available ...
  */
-#define LORAMAC_SPECIFICATION_VERSION                   0x01000300
+#define LORAMAC_SPECIFICATION_VERSION                   0x01000400
 
 /*!
  * @brief Enable the additional LoRaWAN packages
@@ -69,7 +69,7 @@ extern "C" {
  *  - Firmware Management Protocol (Package ID: 4, Default Port: 203)
  *  The Certification Protocol is also defined as a mandatory package (Package ID: 0, Default Port: 224)
  */
-#define LORAWAN_DATA_DISTRIB_MGT                        0
+#define LORAWAN_DATA_DISTRIB_MGT                        1
 
 /*!
  * @brief LoRaWAN packages version
@@ -128,7 +128,7 @@ extern "C" {
  * @brief Enables/Disables the context storage management storage
  * @note  Must be enabled for LoRaWAN 1.0.4 or later.
  */
-#define CONTEXT_MANAGEMENT_ENABLED                      0
+#define CONTEXT_MANAGEMENT_ENABLED                      1
 
 /* Class B ------------------------------------*/
 /*!

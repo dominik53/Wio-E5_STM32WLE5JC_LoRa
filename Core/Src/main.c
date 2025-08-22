@@ -101,8 +101,8 @@ int main(void)
 	{
 //		while (1)
 //		{
-//			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET); // LED off
-//			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET); // LED on
+////			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET); // LED off
+////			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET); // LED on
 //			HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_5);
 //			HAL_Delay(1000);
 //		}

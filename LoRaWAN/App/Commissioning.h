@@ -67,7 +67,7 @@
 /*!
  * Indicates if the end-device is to be connected to a private or public network
  */
-#define LORAWAN_PUBLIC_NETWORK                             false
+#define LORAWAN_PUBLIC_NETWORK                             true
 
 /*!
  * Current network ID

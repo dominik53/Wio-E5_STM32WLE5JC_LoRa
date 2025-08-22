@@ -68,6 +68,10 @@ typedef enum TxEventType_e
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
+/**
+  * LEDs period value of the timer in ms
+  */
+#define LED_PERIOD_TIME 500
 
 /**
   * Join switch period value of the timer in ms
@@ -268,7 +272,7 @@ static LmHandlerParams_t LmHandlerParams =
 /**
   * @brief Type of Event to generate application Tx
   */
-static TxEventType_t EventType = TX_ON_TIMER;
+static TxEventType_t EventType = TX_ON_EVENT;
 
 /**
   * @brief Timer to handle the application Tx
