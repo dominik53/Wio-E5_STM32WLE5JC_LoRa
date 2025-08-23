@@ -203,6 +203,9 @@ void SubghzApp_Init(void)
   Radio.Init(&RadioEvents);
 
   /* USER CODE BEGIN SubghzApp_Init_2 */
+#if DEBUG_LORAWAN
+  Radio.SetPublicNetwork(true);
+#endif
 	/* Radio Set frequency */
 	Radio.SetChannel(RF_FREQUENCY);
 
@@ -290,6 +293,10 @@ static void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t LoraS
 	if (RxBufferSize <= MAX_APP_BUFFER_SIZE)
 	{
 		memcpy(BufferRx, payload, RxBufferSize);
+	}
+	else
+	{
+		printf("RxBufferSize too large\n\r");
 	}
 
 #if LORA_DIRECTION == LORA_TRANSMITER
@@ -430,13 +437,23 @@ static void Communication_Process(void) // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 
 
 			memcpy(rxMessage, BufferRx, MAX_APP_BUFFER_SIZE);
 
-//			printf("Acquired data: \"%s\"\n\r", BufferRx);
-			printf("Received data nr %lu", ++CommTickCnt);
+			// print received data
+			printf("Acquired data %lu: \"", ++CommTickCnt);
+			for(uint16_t i = 0; i < RxBufferSize; i++)
+			{
+				if(i != 0)
+					printf(" ");
+
+				printf("%02X", rxMessage[i]);
+			}
+			printf("\"\n\n\r");
 
 			memset(BufferRx, 0, MAX_APP_BUFFER_SIZE);
 			RxBufferSize = 0;
 
+#if DEBUG_LORAWAN == 0
 			State = STATE_ECHO_TX;
+#endif
 		}
 		else
 		{
@@ -577,7 +594,7 @@ static void SetLoRaConfiguration(uint8_t NewConfigurationNum) // todo zmienic ko
 		LoRa.LORA_SYMBOL_TIMEOUT = 5;
 		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
 		LoRa.LORA_IQ_INVERSION_ON = false;
-		LoRa.PAYLOAD_LEN = 255;
+		LoRa.PAYLOAD_LEN = 23;
 		LoRa.TX_TIMEOUT_VALUE = 15000;
 		break;
 
