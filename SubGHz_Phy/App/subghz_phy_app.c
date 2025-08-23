@@ -73,15 +73,15 @@ typedef struct
 
 typedef struct
 {
-	uint32_t LORA_BANDWIDTH;
-	uint32_t LORA_SPREADING_FACTOR;
-	uint8_t LORA_CODINGRATE;
-	uint16_t LORA_PREAMBLE_LENGTH;
+	uint32_t LORA_BANDWIDTH;		// [0: 125 kHz, 1: 250 kHz, 2: 500 kHz, 3: Reserved]
+	uint32_t LORA_SPREADING_FACTOR;	// [SF7..SF12]
+	uint8_t LORA_CODINGRATE;		// [1: 4/5, 2: 4/6, 3: 4/7, 4: 4/8]
+	uint16_t LORA_PREAMBLE_LENGTH;	// Same for Tx and Rx, middleware sets min 12 for SF5 and 6
 	bool LORA_FIX_LENGTH_PAYLOAD_ON;
 	bool LORA_IQ_INVERSION_ON;
 	uint32_t TX_TIMEOUT_VALUE;
-	uint16_t LORA_SYMBOL_TIMEOUT;
-	uint8_t PAYLOAD_LEN;
+	uint16_t LORA_SYMBOL_TIMEOUT;	// Symbols
+	uint8_t PAYLOAD_LEN;			// 8 - 256
 } LoRaConfiguration_t;
 
 /* USER CODE END PTD */
@@ -570,8 +570,8 @@ static void SetLoRaConfiguration(uint8_t NewConfigurationNum) // todo zmienic ko
 	switch (NewConfigurationNum)
 	{
 	case 0:
-		LoRa.LORA_BANDWIDTH = 1;
-		LoRa.LORA_SPREADING_FACTOR = 7;
+		LoRa.LORA_BANDWIDTH = 0;
+		LoRa.LORA_SPREADING_FACTOR = 12;
 		LoRa.LORA_CODINGRATE = 1;
 		LoRa.LORA_PREAMBLE_LENGTH = 8;
 		LoRa.LORA_SYMBOL_TIMEOUT = 5;

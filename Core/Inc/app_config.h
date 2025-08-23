@@ -16,7 +16,7 @@
 
 /************ APP CONFIGURATION ************/
 /*******************************************/
-#define LORA_DIRECTION LORA_TRANSMITER
+#define LORA_DIRECTION LORA_RECEIVER
 
 
 

@@ -43,7 +43,7 @@ extern "C" {
 #define USE_MODEM_LORA  1
 #define USE_MODEM_FSK   0
 
-#define RF_FREQUENCY                                869525000 // EU standards, 10% duty cycle, 24 dBm max (in my case 14+2), middle of 869.4–869.65[Hz] so BW=250 is ok
+#define RF_FREQUENCY                                868100000 //869525000 // EU standards, 10% duty cycle, 24 dBm max (in my case 14+2), middle of 869.4–869.65[Hz] so BW=250 is ok
 
 #ifndef TX_OUTPUT_POWER
 #define TX_OUTPUT_POWER                             14 // max of the Wio-E5 LE module [dBm]
@@ -60,7 +60,7 @@ extern "C" {
 //#define LORA_SYMBOL_TIMEOUT                         5        /* Symbols */
 //#define LORA_FIX_LENGTH_PAYLOAD_ON                  false
 //#define LORA_IQ_INVERSION_ON                        false
-//#define PAYLOAD_LEN                                 64	// max 256
+//#define PAYLOAD_LEN                                 64	// max 255
 
 #elif (( USE_MODEM_LORA == 0 ) && ( USE_MODEM_FSK == 1 ))
 
