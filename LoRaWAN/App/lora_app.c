@@ -272,7 +272,7 @@ static LmHandlerParams_t LmHandlerParams =
 /**
   * @brief Type of Event to generate application Tx
   */
-static TxEventType_t EventType = TX_ON_EVENT;
+static TxEventType_t EventType = TX_ON_TIMER;
 
 /**
   * @brief Timer to handle the application Tx
