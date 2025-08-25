@@ -16,13 +16,14 @@
 
 /************ APP CONFIGURATION ************/
 /*******************************************/
-#define LORA_DIRECTION LORA_RECEIVER
+#define LORA_DIRECTION LORA_TRANSMITER
 
 
 
 
 #define APP_LOG_ENABLED	1
-#define DEBUG_LORAWAN	1
+#define DEBUG_LORAWAN	0		// nasłuchiwanie ramek, receiver only
+#define DEBUG_TRANSMITTER	0	// ciągłe wysyłanie ramek, transmiter only
 
 /*******************************************/
 /*******************************************/

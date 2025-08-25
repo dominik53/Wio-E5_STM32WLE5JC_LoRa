@@ -130,6 +130,10 @@ static SubGhz_MeasurementsCollection_t Collection[CONFIGURATIONS_NUM];
 static LoRaConfiguration_t LoRa;
 static SubGhz_State_t State;
 
+#if DEBUG_TRANSMITTER
+uint8_t txSemaphore = 1;
+#endif
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -203,7 +207,7 @@ void SubghzApp_Init(void)
   Radio.Init(&RadioEvents);
 
   /* USER CODE BEGIN SubghzApp_Init_2 */
-#if DEBUG_LORAWAN
+#if DEBUG_LORAWAN && LORA_DIRECTION == LORA_RECEIVER
   Radio.SetPublicNetwork(true);
 #endif
 	/* Radio Set frequency */
@@ -266,6 +270,11 @@ static void OnTxDone(void)
 
 #if LORA_DIRECTION == LORA_TRANSMITER
 	txTimestampEnd = HAL_GetTick();
+#if DEBUG_TRANSMITTER
+	printf("TX time: %lu\n\r", (txTimestampEnd - txTimestamp));
+	txSemaphore = 1;
+	return;
+#endif
 	Collection[ConfigurationNum].Measurements[MeasurementNum].TxBitRate =
 			(LoRa.PAYLOAD_LEN * 8 * 1000) / (txTimestampEnd - txTimestamp); // *8 -> byte to bit, *1000 -> ms to s
 
@@ -329,6 +338,10 @@ static void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t LoraS
 static void OnTxTimeout(void)
 {
   /* USER CODE BEGIN OnTxTimeout */
+#if DEBUG_TRANSMITTER
+	txSemaphore = 1;
+	return;
+#endif
 	APP_LOG(TS_ON, VLEVEL_L, "OnTxTimeout\n\r");
 
 #if LORA_DIRECTION == LORA_TRANSMITER
@@ -393,6 +406,19 @@ static void Communication_Process(void) // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 
 	switch (State)
 	{
 	case STATE_TX:
+#if DEBUG_TRANSMITTER
+		if(txSemaphore)
+		{
+			txSemaphore = 0;
+			txTimestamp = HAL_GetTick();  // start transmission
+			Radio.Send(BufferTx, LoRa.PAYLOAD_LEN);
+		}
+		else
+			memcpy(BufferTx, txMessage, LoRa.PAYLOAD_LEN);
+
+		break;
+#endif
+
 		if(ConfigurationNum == 0 && MeasurementNum == 0)
 		{
 			printf("Waiting on input to start measurements...\n\r");
@@ -413,6 +439,7 @@ static void Communication_Process(void) // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 
 				}
 			}
 		}
+
 
 		memset(&Collection[ConfigurationNum].Measurements[MeasurementNum], 0,
 				sizeof(Collection[0].Measurements[0]));
@@ -451,7 +478,7 @@ static void Communication_Process(void) // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 
 			memset(BufferRx, 0, MAX_APP_BUFFER_SIZE);
 			RxBufferSize = 0;
 
-#if DEBUG_LORAWAN == 0
+#if DEBUG_LORAWAN == 0 && LORA_DIRECTION == LORA_RECEIVER
 			State = STATE_ECHO_TX;
 #endif
 		}
@@ -587,15 +614,37 @@ static void SetLoRaConfiguration(uint8_t NewConfigurationNum) // todo zmienic ko
 	switch (NewConfigurationNum)
 	{
 	case 0:
-		LoRa.LORA_BANDWIDTH = 0;
-		LoRa.LORA_SPREADING_FACTOR = 12;
+		LoRa.LORA_BANDWIDTH = 1;
+		LoRa.LORA_SPREADING_FACTOR = 7;
 		LoRa.LORA_CODINGRATE = 1;
 		LoRa.LORA_PREAMBLE_LENGTH = 8;
 		LoRa.LORA_SYMBOL_TIMEOUT = 5;
 		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
 		LoRa.LORA_IQ_INVERSION_ON = false;
-		LoRa.PAYLOAD_LEN = 23;
+		LoRa.PAYLOAD_LEN = 255;
 		LoRa.TX_TIMEOUT_VALUE = 15000;
+
+//		LoRa.LORA_BANDWIDTH = 1;
+//		LoRa.LORA_SPREADING_FACTOR = 7;
+//		LoRa.LORA_CODINGRATE = 1;
+//		LoRa.LORA_PREAMBLE_LENGTH = 8;
+//		LoRa.LORA_SYMBOL_TIMEOUT = 5;
+//		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
+//		LoRa.LORA_IQ_INVERSION_ON = false;
+//		LoRa.PAYLOAD_LEN = 8;
+//		LoRa.TX_TIMEOUT_VALUE = 15000;
+
+//		LoRa.LORA_BANDWIDTH = 0;
+//		LoRa.LORA_SPREADING_FACTOR = 12;
+//		LoRa.LORA_CODINGRATE = 4;
+//		LoRa.LORA_PREAMBLE_LENGTH = 8;
+//		LoRa.LORA_SYMBOL_TIMEOUT = 5;
+//		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
+//		LoRa.LORA_IQ_INVERSION_ON = false;
+//		LoRa.PAYLOAD_LEN = 8;
+//		LoRa.TX_TIMEOUT_VALUE = 15000;
+
+
 		break;
 
 	case 1:
