@@ -684,6 +684,18 @@ static void SetLoRaConfiguration(uint8_t NewConfigurationNum) // todo zmienic ko
 	switch (NewConfigurationNum)
 	{
 	case 0:
+
+#if DEBUG_LORAWAN
+		LoRa.LORA_BANDWIDTH = 0;
+		LoRa.LORA_SPREADING_FACTOR = 12;
+		LoRa.LORA_CODINGRATE = 1;
+		LoRa.LORA_PREAMBLE_LENGTH = 8;
+		LoRa.LORA_SYMBOL_TIMEOUT = 5;
+		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
+		LoRa.LORA_IQ_INVERSION_ON = true;
+		LoRa.PAYLOAD_LEN = 33;
+		LoRa.TX_TIMEOUT_VALUE = 15000;
+#else
 		LoRa.LORA_BANDWIDTH = 1;
 		LoRa.LORA_SPREADING_FACTOR = 7;
 		LoRa.LORA_CODINGRATE = 1;
@@ -693,6 +705,7 @@ static void SetLoRaConfiguration(uint8_t NewConfigurationNum) // todo zmienic ko
 		LoRa.LORA_IQ_INVERSION_ON = false;
 		LoRa.PAYLOAD_LEN = 255;
 		LoRa.TX_TIMEOUT_VALUE = 15000;
+#endif
 
 //		LoRa.LORA_BANDWIDTH = 1;
 //		LoRa.LORA_SPREADING_FACTOR = 7;

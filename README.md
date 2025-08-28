@@ -19,3 +19,7 @@ Projekt magisterski – komunikacja LoRa Point-to-Point na platformie STM32WLE5J
 ## Autor
 
 Dominik Kijak, Gliwice 2025
+
+Przy zmianie gałęzi z LoRaWAN do P2P należy dodać bibliotekę STM32Cryptographic_CM4 do "Path and symbols" we właściwościach projektu.
+
+Należy też dodać katalog "SubGHz_Phy" do ścieżek plików źródłowych.

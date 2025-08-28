@@ -19,13 +19,13 @@
 /*******************************************/
 #define LORA_DIRECTION	LORA_RECEIVER
 
-#define ENCRYPTION	ENCRYPTION_AES128_CTR_CMAC
+#define ENCRYPTION	ENCRYPTION_NONE
 
 
 #define APP_LOG_ENABLED	1
-#define DEBUG_LORAWAN	0		// nasłuchiwanie ramek, receiver only
+#define DEBUG_LORAWAN	1		// nasłuchiwanie ramek, receiver only
 #define DEBUG_TRANSMITTER	0	// ciągłe wysyłanie ramek, transmiter only
-#define LOG_RX_DATA	0			// czy wypisywac na uart odebrane dane
+#define LOG_RX_DATA	1			// czy wypisywac na uart odebrane dane
 
 /*******************************************/
 /*******************************************/
