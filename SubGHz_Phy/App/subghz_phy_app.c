@@ -519,9 +519,17 @@ static void Communication_Process(void) // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 
 			for(uint16_t i = 0; i < RxBufferSize; i++)
 #endif
 			{
+#if DEBUG_LORAWAN == 1
+				if(i != 0)
+					printf(" ");
+				printf("0x%02X", rxMessage[i]);
+			}
+			printf("\"\n\r");
+#else
 				printf("%c", (unsigned char)rxMessage[i]);
 			}
 			printf("\"\n\r");
+#endif
 #endif
 
 			memset(BufferRx, 0, MAX_APP_BUFFER_SIZE);
@@ -686,6 +694,7 @@ static void SetLoRaConfiguration(uint8_t NewConfigurationNum) // todo zmienic ko
 	case 0:
 
 #if DEBUG_LORAWAN
+		// RX1, FREQ: 868500000
 		LoRa.LORA_BANDWIDTH = 0;
 		LoRa.LORA_SPREADING_FACTOR = 12;
 		LoRa.LORA_CODINGRATE = 1;
@@ -695,6 +704,17 @@ static void SetLoRaConfiguration(uint8_t NewConfigurationNum) // todo zmienic ko
 		LoRa.LORA_IQ_INVERSION_ON = true;
 		LoRa.PAYLOAD_LEN = 33;
 		LoRa.TX_TIMEOUT_VALUE = 15000;
+
+		// RX2, FREQ: 869525000
+//		LoRa.LORA_BANDWIDTH = 0;
+//		LoRa.LORA_SPREADING_FACTOR = 12;
+//		LoRa.LORA_CODINGRATE = 1;
+//		LoRa.LORA_PREAMBLE_LENGTH = 8;
+//		LoRa.LORA_SYMBOL_TIMEOUT = 5;
+//		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
+//		LoRa.LORA_IQ_INVERSION_ON = true;
+//		LoRa.PAYLOAD_LEN = 33;
+//		LoRa.TX_TIMEOUT_VALUE = 15000;
 #else
 		LoRa.LORA_BANDWIDTH = 1;
 		LoRa.LORA_SPREADING_FACTOR = 7;
