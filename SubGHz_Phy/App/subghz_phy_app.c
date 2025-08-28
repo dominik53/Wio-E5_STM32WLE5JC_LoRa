@@ -21,6 +21,10 @@
 #include "subghz_phy_version.h"
 #include <stdio.h>
 #include <math.h>
+
+#if ENCRYPTION == ENCRYPTION_AES128_CTR_CMAC
+#include "p2p_encryption.h"
+#endif
 /* USER CODE END Includes */
 
 /* External variables ---------------------------------------------------------*/
@@ -59,7 +63,7 @@ typedef struct
 	int16_t RssiValue; /* Last  Received packer Rssi*/
 	int8_t SnrValue; /* Last  Received packer SNR (in Lora modulation)*/
 	uint16_t TxBitRate; // equals: PayloadLen / TxTime
-	Error_Code_t ErrorCode;	/* 0 - , 1 - , 2 - , 3 - , 4 -  */
+	Error_Code_t ErrorCode;	/* 0 - 4  */
 
 } SubGhz_Measurements_t;	// last received data
 
@@ -124,7 +128,10 @@ static uint32_t rxTimestamp = 0; /* received timestamp */
 
 static uint8_t ConfigurationNum = 0; // which LoRa configuration is tested now
 static uint8_t MeasurementNum = 0; // which configurations measurement is tested now
+
+#if LOG_RX_DATA
 static uint32_t CommTickCnt = 0; // num of received packages
+#endif
 
 static SubGhz_MeasurementsCollection_t Collection[CONFIGURATIONS_NUM];
 static LoRaConfiguration_t LoRa;
@@ -132,6 +139,19 @@ static SubGhz_State_t State;
 
 #if DEBUG_TRANSMITTER
 uint8_t txSemaphore = 1;
+#endif
+
+#if ENCRYPTION == ENCRYPTION_AES128_CTR_CMAC
+// encryption
+p2penc_ctx_t ctx;	// personal info
+uint32_t fcnt;		// frame counter
+size_t out_len;		// encrypted frame length
+size_t used_payload_len;	// payload lenth taken for encryption
+
+// decryption
+size_t decrypt_len;
+uint32_t decrypt_fcnt;
+uint8_t decrypt_fport;
 #endif
 
 /* USER CODE END PV */
@@ -194,7 +214,9 @@ static void ExportMeasurementsAsCSV(void);
 void SubghzApp_Init(void)
 {
   /* USER CODE BEGIN SubghzApp_Init_1 */
-
+#if ENCRYPTION == ENCRYPTION_AES128_CTR_CMAC
+		p2penc_init(&ctx, DEVICE_ADDRESS, P2PENC_DIR_UPLINK, nwk_s_key, app_s_key);
+#endif
   /* USER CODE END SubghzApp_Init_1 */
 
   /* Radio initialization */
@@ -275,8 +297,14 @@ static void OnTxDone(void)
 	txSemaphore = 1;
 	return;
 #endif
+
+#if ENCRYPTION == ENCRYPTION_AES128_CTR_CMAC
+	Collection[ConfigurationNum].Measurements[MeasurementNum].TxBitRate =
+			(used_payload_len * 8 * 1000) / (txTimestampEnd - txTimestamp); // *8 -> byte to bit, *1000 -> ms to s
+#else
 	Collection[ConfigurationNum].Measurements[MeasurementNum].TxBitRate =
 			(LoRa.PAYLOAD_LEN * 8 * 1000) / (txTimestampEnd - txTimestamp); // *8 -> byte to bit, *1000 -> ms to s
+#endif
 
 	// listen for echo
 	Radio.Rx((txTimestampEnd - txTimestamp) + 500); // 500 ms margin
@@ -445,14 +473,25 @@ static void Communication_Process(void) // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 
 				sizeof(Collection[0].Measurements[0]));
 
 		memset(BufferTx, 0, MAX_APP_BUFFER_SIZE);
+
+#if ENCRYPTION == ENCRYPTION_AES128_CTR_CMAC
+		int rc = p2penc_build_frame(&ctx, fcnt, F_PORT, txMessage, LoRa.PAYLOAD_LEN, LoRa.PAYLOAD_LEN, BufferTx, &out_len, &used_payload_len);
+		printf("Encryption result: %d, frame_cnt: %lu, encrypted frame len: %u, payload used: %u/%u \n\r", rc, fcnt, out_len, used_payload_len, LoRa.PAYLOAD_LEN);
+#else
 		memcpy(BufferTx, txMessage, LoRa.PAYLOAD_LEN);
+#endif
 
 		HAL_Delay(Radio.GetWakeupTime());
 
 		HAL_GPIO_TogglePin(LED1_GPIO_PORT, LED1_PIN);
 		txTimestamp = HAL_GetTick();  // start transmission
 
+#if ENCRYPTION == ENCRYPTION_AES128_CTR_CMAC
+		Radio.Send(BufferTx, out_len);
+		fcnt += 2;	// plus 1 for this frame, another +1 for echo frame
+#else
 		Radio.Send(BufferTx, LoRa.PAYLOAD_LEN);
+#endif
 
 		State = STATE_ECHO_RX;
 		break;
@@ -462,18 +501,28 @@ static void Communication_Process(void) // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 
 		{
 			HAL_GPIO_TogglePin(LED1_GPIO_PORT, LED1_PIN);
 
+#if ENCRYPTION == ENCRYPTION_AES128_CTR_CMAC
+			decrypt_len = sizeof(rxMessage);
+			int result = p2penc_parse_and_decrypt(&ctx, BufferRx, LoRa.PAYLOAD_LEN, rxMessage, &decrypt_len, &decrypt_fcnt, &decrypt_fport);
+			printf("Decryption result: %d, received data len: %u\n\r", result, RxBufferSize);
+#else
 			memcpy(rxMessage, BufferRx, MAX_APP_BUFFER_SIZE);
+#endif
 
+
+#if LOG_RX_DATA
 			// print received data
 			printf("Acquired data %lu: \"", ++CommTickCnt);
+#if ENCRYPTION == ENCRYPTION_AES128_CTR_CMAC
+			for(uint16_t i = 0; i < decrypt_len; i++)
+#else
 			for(uint16_t i = 0; i < RxBufferSize; i++)
+#endif
 			{
-				if(i != 0)
-					printf(" ");
-
-				printf("%02X", rxMessage[i]);
+				printf("%c", (unsigned char)rxMessage[i]);
 			}
-			printf("\"\n\n\r");
+			printf("\"\n\r");
+#endif
 
 			memset(BufferRx, 0, MAX_APP_BUFFER_SIZE);
 			RxBufferSize = 0;
@@ -500,13 +549,19 @@ static void Communication_Process(void) // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 
 		break;
 
 	case STATE_ECHO_TX:
-		printf("Waiting for Radio.GetWakeupTime(): %lu\n\r", Radio.GetWakeupTime());
+//		printf("Waiting for Radio.GetWakeupTime(): %lu\n\r", Radio.GetWakeupTime());
 		HAL_Delay(Radio.GetWakeupTime());
 
 		memset(BufferTx, 0, MAX_APP_BUFFER_SIZE);
-		memcpy(BufferTx, rxMessage, LoRa.PAYLOAD_LEN);
 
+#if ENCRYPTION == ENCRYPTION_AES128_CTR_CMAC
+		int results = p2penc_build_frame(&ctx, (decrypt_fcnt + 1), F_PORT, rxMessage, LoRa.PAYLOAD_LEN, LoRa.PAYLOAD_LEN, BufferTx, &out_len, &used_payload_len);
+		printf("Encryption result: %d, frame_cnt: %lu, encrypted frame len: %u, payload used: %u/%u \n\r", results, (decrypt_fcnt + 1), out_len, used_payload_len, LoRa.PAYLOAD_LEN);
+		Radio.Send(BufferTx, out_len);
+#else
+		memcpy(BufferTx, rxMessage, LoRa.PAYLOAD_LEN);
 		Radio.Send(BufferTx, LoRa.PAYLOAD_LEN);
+#endif
 
 		State = STATE_RX;
 		break;
@@ -514,14 +569,29 @@ static void Communication_Process(void) // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 
 	case STATE_ECHO_RX:
 		if (RxBufferSize > 0)
 		{
+#if ENCRYPTION == ENCRYPTION_AES128_CTR_CMAC
+			decrypt_len = sizeof(rxMessage);
+			int resulte = p2penc_parse_and_decrypt(&ctx, BufferRx, LoRa.PAYLOAD_LEN, rxMessage, &decrypt_len, &decrypt_fcnt, &decrypt_fport);
+			printf("Decryption result: %d, decrypt_len: %u\n\r", resulte, decrypt_len);
+#endif
+
 //			printf("Acquired data: \"%s\"\n\r", BufferRx);
 
 			uint8_t payloadIsAccurate = 1;
+
+#if ENCRYPTION == ENCRYPTION_AES128_CTR_CMAC
+			for (uint16_t index = 0; index < decrypt_len; index++)
+			{
+				if (rxMessage[index] != txMessage[index])
+					payloadIsAccurate = 0;
+			}
+#else
 			for (uint16_t index = 0; index < LoRa.PAYLOAD_LEN; index++)
 			{
 				if (BufferRx[index] != BufferTx[index])
 					payloadIsAccurate = 0;
 			}
+#endif
 
 			if (payloadIsAccurate)
 			{
@@ -655,7 +725,7 @@ static void SetLoRaConfiguration(uint8_t NewConfigurationNum) // todo zmienic ko
 		LoRa.LORA_SYMBOL_TIMEOUT = 5;
 		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
 		LoRa.LORA_IQ_INVERSION_ON = false;
-		LoRa.PAYLOAD_LEN = 8;
+		LoRa.PAYLOAD_LEN = 16;
 		LoRa.TX_TIMEOUT_VALUE = 15000;
 		break;
 
@@ -667,7 +737,7 @@ static void SetLoRaConfiguration(uint8_t NewConfigurationNum) // todo zmienic ko
 		LoRa.LORA_SYMBOL_TIMEOUT = 5;
 		LoRa.LORA_FIX_LENGTH_PAYLOAD_ON = false;
 		LoRa.LORA_IQ_INVERSION_ON = false;
-		LoRa.PAYLOAD_LEN = 8;
+		LoRa.PAYLOAD_LEN = 16;
 		LoRa.TX_TIMEOUT_VALUE = 15000;
 		break;
 
