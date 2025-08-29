@@ -20,6 +20,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32wlxx_wio-e5_radio.h"
+#include "sys_app.h" // todo delete, only for log function
 
 /** @addtogroup BSP
   * @{
@@ -46,6 +47,7 @@
 int32_t BSP_RADIO_Init(void)
 {
   GPIO_InitTypeDef  gpio_init_structure = {0};
+//  GPIO_InitTypeDef gpio = {0};
   
   /* Enable the Radio Switch Clock */
   RF_SW_CTRL1_GPIO_CLK_ENABLE();
@@ -67,6 +69,16 @@ int32_t BSP_RADIO_Init(void)
   HAL_GPIO_WritePin(RF_SW_CTRL2_GPIO_PORT, RF_SW_CTRL2_PIN, GPIO_PIN_RESET); 
   HAL_GPIO_WritePin(RF_SW_CTRL1_GPIO_PORT, RF_SW_CTRL1_PIN, GPIO_PIN_RESET); 
 //  HAL_GPIO_WritePin(RF_SW_CTRL3_GPIO_PORT, RF_SW_CTRL3_PIN, GPIO_PIN_RESET);
+
+  	// TCXO (PB0)
+	RF_TCXO_VCC_CLK_ENABLE();// enable port B clock
+	gpio_init_structure.Pin = RF_TCXO_VCC_PIN;             // PB0
+	gpio_init_structure.Mode = GPIO_MODE_OUTPUT_PP;
+	gpio_init_structure.Pull = GPIO_NOPULL;
+	gpio_init_structure.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+	HAL_GPIO_Init(RF_TCXO_VCC_GPIO_PORT, &gpio_init_structure);
+	HAL_GPIO_WritePin(RF_TCXO_VCC_GPIO_PORT, RF_TCXO_VCC_PIN, GPIO_PIN_SET);
+	HAL_Delay(5); // warm-up
 
   return BSP_ERROR_NONE;
 }
@@ -108,6 +120,7 @@ int32_t BSP_RADIO_ConfigRFSwitch(BSP_RADIO_Switch_TypeDef Config)
   {
     case RADIO_SWITCH_OFF:
     {
+    	APP_LOG(TS_ON, VLEVEL_M, "BSP_RADIO_ConfigRFSwitch: radio off\n\r");
       /* Turn off switch */
 //      HAL_GPIO_WritePin(RF_SW_CTRL3_GPIO_PORT, RF_SW_CTRL3_PIN, GPIO_PIN_RESET);
       HAL_GPIO_WritePin(RF_SW_CTRL1_GPIO_PORT, RF_SW_CTRL1_PIN, GPIO_PIN_RESET);
@@ -116,6 +129,7 @@ int32_t BSP_RADIO_ConfigRFSwitch(BSP_RADIO_Switch_TypeDef Config)
     }
     case RADIO_SWITCH_RX:
     {
+    	APP_LOG(TS_ON, VLEVEL_M, "BSP_RADIO_ConfigRFSwitch: radio rx\n\r");
       /*Turns On in Rx Mode the RF Switch */
 //      HAL_GPIO_WritePin(RF_SW_CTRL3_GPIO_PORT, RF_SW_CTRL3_PIN, GPIO_PIN_SET);
       HAL_GPIO_WritePin(RF_SW_CTRL1_GPIO_PORT, RF_SW_CTRL1_PIN, GPIO_PIN_SET); 
@@ -124,6 +138,7 @@ int32_t BSP_RADIO_ConfigRFSwitch(BSP_RADIO_Switch_TypeDef Config)
     }
     case RADIO_SWITCH_RFO_LP:
     {
+    	APP_LOG(TS_ON, VLEVEL_M, "BSP_RADIO_ConfigRFSwitch: radio rfo lp\n\r");
       /*Turns On in Tx Low Power the RF Switch */
 //      HAL_GPIO_WritePin(RF_SW_CTRL3_GPIO_PORT, RF_SW_CTRL3_PIN, GPIO_PIN_SET);
       HAL_GPIO_WritePin(RF_SW_CTRL1_GPIO_PORT, RF_SW_CTRL1_PIN, GPIO_PIN_SET); 
@@ -132,6 +147,7 @@ int32_t BSP_RADIO_ConfigRFSwitch(BSP_RADIO_Switch_TypeDef Config)
     }
     case RADIO_SWITCH_RFO_HP:
     {
+    	APP_LOG(TS_ON, VLEVEL_M, "BSP_RADIO_ConfigRFSwitch: radio rfo hp\n\r");
       /*Turns On in Tx High Power the RF Switch */
 //      HAL_GPIO_WritePin(RF_SW_CTRL3_GPIO_PORT, RF_SW_CTRL3_PIN, GPIO_PIN_SET);
       HAL_GPIO_WritePin(RF_SW_CTRL1_GPIO_PORT, RF_SW_CTRL1_PIN, GPIO_PIN_RESET); 
@@ -139,6 +155,7 @@ int32_t BSP_RADIO_ConfigRFSwitch(BSP_RADIO_Switch_TypeDef Config)
       break;
     }
     default:
+    	APP_LOG(TS_ON, VLEVEL_M, "BSP_RADIO_ConfigRFSwitch: ERROR - radio default\n\r");
       break;    
   }  
 

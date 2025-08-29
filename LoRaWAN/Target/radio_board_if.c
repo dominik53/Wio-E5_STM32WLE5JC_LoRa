@@ -22,7 +22,7 @@
 #include "radio_board_if.h"
 
 /* USER CODE BEGIN Includes */
-
+#include "platform.h"
 /* USER CODE END Includes */
 
 /* External variables ---------------------------------------------------------*/

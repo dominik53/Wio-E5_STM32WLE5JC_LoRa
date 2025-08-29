@@ -429,6 +429,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 static void OnRxData(LmHandlerAppData_t *appData, LmHandlerRxParams_t *params)
 {
   /* USER CODE BEGIN OnRxData_1 */
+#if APP_LOG_EVENTS_ENABLED == 1
+	APP_LOG(TS_ON, VLEVEL_M, "OnRxData\n\r");
+#endif
+
   uint8_t RxPort = 0;
 
   if (params != NULL)
@@ -603,7 +607,9 @@ static void SendTxData(void)
 static void OnTxTimerEvent(void *context)
 {
   /* USER CODE BEGIN OnTxTimerEvent_1 */
-
+#if APP_LOG_EVENTS_ENABLED == 1
+	APP_LOG(TS_ON, VLEVEL_M, "OnTxTimerEvent\n\r");
+#endif
   /* USER CODE END OnTxTimerEvent_1 */
   UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_LoRaSendOnTxTimerOrButtonEvent), CFG_SEQ_Prio_0);
 
@@ -621,6 +627,10 @@ static void OnTxTimerEvent(void *context)
 static void OnTxData(LmHandlerTxParams_t *params)
 {
   /* USER CODE BEGIN OnTxData_1 */
+#if APP_LOG_EVENTS_ENABLED == 1
+	APP_LOG(TS_ON, VLEVEL_M, "OnTxData\n\r");
+#endif
+
   if ((params != NULL))
   {
     /* Process Tx event only if its a mcps response to prevent some internal events (mlme) */
@@ -647,6 +657,10 @@ static void OnTxData(LmHandlerTxParams_t *params)
 static void OnJoinRequest(LmHandlerJoinParams_t *joinParams)
 {
   /* USER CODE BEGIN OnJoinRequest_1 */
+#if APP_LOG_EVENTS_ENABLED == 1
+	APP_LOG(TS_ON, VLEVEL_M, "OnJoinRequest\n\r");
+#endif
+
   if (joinParams != NULL)
   {
     if (joinParams->Status == LORAMAC_HANDLER_SUCCESS)
@@ -674,6 +688,10 @@ static void OnJoinRequest(LmHandlerJoinParams_t *joinParams)
 static void OnBeaconStatusChange(LmHandlerBeaconParams_t *params)
 {
   /* USER CODE BEGIN OnBeaconStatusChange_1 */
+#if APP_LOG_EVENTS_ENABLED == 1
+	APP_LOG(TS_ON, VLEVEL_M, "OnBeaconStatusChange\n\r");
+#endif
+
   if (params != NULL)
   {
     switch (params->State)
@@ -709,13 +727,19 @@ static void OnBeaconStatusChange(LmHandlerBeaconParams_t *params)
 static void OnSysTimeUpdate(void)
 {
   /* USER CODE BEGIN OnSysTimeUpdate_1 */
-
+#if APP_LOG_EVENTS_ENABLED == 1
+	APP_LOG(TS_ON, VLEVEL_M, "OnSysTimeUpdate\n\r");
+#endif
   /* USER CODE END OnSysTimeUpdate_1 */
 }
 
 static void OnClassChange(DeviceClass_t deviceClass)
 {
   /* USER CODE BEGIN OnClassChange_1 */
+#if APP_LOG_EVENTS_ENABLED == 1
+	APP_LOG(TS_ON, VLEVEL_M, "OnClassChange\n\r");
+#endif
+
   APP_LOG(TS_OFF, VLEVEL_M, "Switch to Class %c done\r\n", "ABC"[deviceClass]);
   /* USER CODE END OnClassChange_1 */
 }
@@ -723,7 +747,9 @@ static void OnClassChange(DeviceClass_t deviceClass)
 static void OnMacProcessNotify(void)
 {
   /* USER CODE BEGIN OnMacProcessNotify_1 */
-
+#if APP_LOG_EVENTS_ENABLED == 1
+	APP_LOG(TS_ON, VLEVEL_M, "OnMacProcessNotify\n\r");
+#endif
   /* USER CODE END OnMacProcessNotify_1 */
   UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_LmHandlerProcess), CFG_SEQ_Prio_0);
 
@@ -735,7 +761,9 @@ static void OnMacProcessNotify(void)
 static void OnTxPeriodicityChanged(uint32_t periodicity)
 {
   /* USER CODE BEGIN OnTxPeriodicityChanged_1 */
-
+#if APP_LOG_EVENTS_ENABLED == 1
+	APP_LOG(TS_ON, VLEVEL_M, "OnTxPeriodicityChanged\n\r");
+#endif
   /* USER CODE END OnTxPeriodicityChanged_1 */
   TxPeriodicity = periodicity;
 
@@ -757,7 +785,9 @@ static void OnTxPeriodicityChanged(uint32_t periodicity)
 static void OnTxFrameCtrlChanged(LmHandlerMsgTypes_t isTxConfirmed)
 {
   /* USER CODE BEGIN OnTxFrameCtrlChanged_1 */
-
+#if APP_LOG_EVENTS_ENABLED == 1
+	APP_LOG(TS_ON, VLEVEL_M, "OnTxFrameCtrlChanged\n\r");
+#endif
   /* USER CODE END OnTxFrameCtrlChanged_1 */
   LmHandlerParams.IsTxConfirmed = isTxConfirmed;
   /* USER CODE BEGIN OnTxFrameCtrlChanged_2 */
@@ -768,7 +798,9 @@ static void OnTxFrameCtrlChanged(LmHandlerMsgTypes_t isTxConfirmed)
 static void OnPingSlotPeriodicityChanged(uint8_t pingSlotPeriodicity)
 {
   /* USER CODE BEGIN OnPingSlotPeriodicityChanged_1 */
-
+#if APP_LOG_EVENTS_ENABLED == 1
+	APP_LOG(TS_ON, VLEVEL_M, "OnPingSlotPeriodicityChanged\n\r");
+#endif
   /* USER CODE END OnPingSlotPeriodicityChanged_1 */
   LmHandlerParams.PingSlotPeriodicity = pingSlotPeriodicity;
   /* USER CODE BEGIN OnPingSlotPeriodicityChanged_2 */
@@ -779,7 +811,9 @@ static void OnPingSlotPeriodicityChanged(uint8_t pingSlotPeriodicity)
 static void OnSystemReset(void)
 {
   /* USER CODE BEGIN OnSystemReset_1 */
-
+#if APP_LOG_EVENTS_ENABLED == 1
+	APP_LOG(TS_ON, VLEVEL_M, "OnSystemReset\n\r");
+#endif
   /* USER CODE END OnSystemReset_1 */
   if ((LORAMAC_HANDLER_SUCCESS == LmHandlerHalt()) && (LmHandlerJoinStatus() == LORAMAC_HANDLER_SET))
   {
@@ -793,7 +827,9 @@ static void OnSystemReset(void)
 static void StopJoin(void)
 {
   /* USER CODE BEGIN StopJoin_1 */
-
+#if APP_LOG_EVENTS_ENABLED == 1
+	APP_LOG(TS_ON, VLEVEL_M, "StopJoin\n\r");
+#endif
   /* USER CODE END StopJoin_1 */
 
   UTIL_TIMER_Stop(&TxTimer);
@@ -828,7 +864,9 @@ static void StopJoin(void)
 static void OnStopJoinTimerEvent(void *context)
 {
   /* USER CODE BEGIN OnStopJoinTimerEvent_1 */
-
+#if APP_LOG_EVENTS_ENABLED == 1
+	APP_LOG(TS_ON, VLEVEL_M, "OnStopJoinTimerEvent\n\r");
+#endif
   /* USER CODE END OnStopJoinTimerEvent_1 */
   if (ActivationType == LORAWAN_DEFAULT_ACTIVATION_TYPE)
   {
@@ -864,7 +902,9 @@ static void StoreContext(void)
 static void OnNvmDataChange(LmHandlerNvmContextStates_t state)
 {
   /* USER CODE BEGIN OnNvmDataChange_1 */
-
+#if APP_LOG_EVENTS_ENABLED == 1
+	APP_LOG(TS_ON, VLEVEL_M, "OnNvmDataChange\n\r");
+#endif
   /* USER CODE END OnNvmDataChange_1 */
   if (state == LORAMAC_HANDLER_NVM_STORE)
   {
@@ -882,7 +922,9 @@ static void OnNvmDataChange(LmHandlerNvmContextStates_t state)
 static void OnStoreContextRequest(void *nvm, uint32_t nvm_size)
 {
   /* USER CODE BEGIN OnStoreContextRequest_1 */
-
+#if APP_LOG_EVENTS_ENABLED == 1
+	APP_LOG(TS_ON, VLEVEL_M, "OnStoreContextRequest\n\r");
+#endif
   /* USER CODE END OnStoreContextRequest_1 */
   /* store nvm in flash */
   if (FLASH_IF_Erase(LORAWAN_NVM_BASE_ADDRESS, FLASH_PAGE_SIZE) == FLASH_IF_OK)
@@ -897,7 +939,9 @@ static void OnStoreContextRequest(void *nvm, uint32_t nvm_size)
 static void OnRestoreContextRequest(void *nvm, uint32_t nvm_size)
 {
   /* USER CODE BEGIN OnRestoreContextRequest_1 */
-
+#if APP_LOG_EVENTS_ENABLED == 1
+	APP_LOG(TS_ON, VLEVEL_M, "OnRestoreContextRequest\n\r");
+#endif
   /* USER CODE END OnRestoreContextRequest_1 */
   FLASH_IF_Read(nvm, LORAWAN_NVM_BASE_ADDRESS, nvm_size);
   /* USER CODE BEGIN OnRestoreContextRequest_Last */

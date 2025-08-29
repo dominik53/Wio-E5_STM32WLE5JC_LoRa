@@ -1023,7 +1023,7 @@ LmHandlerErrorStatus_t LmHandlerSetSystemMaxRxError( uint32_t maxErrorInMs )
     MibRequestConfirm_t mibReq;
 
     mibReq.Type = MIB_SYSTEM_MAX_RX_ERROR;
-    mibReq.Param.SystemMaxRxError = maxErrorInMs;
+    mibReq.Param.SystemMaxRxError = 30;//maxErrorInMs; // todo delete
     if( LoRaMacMibSetRequestConfirm( &mibReq ) != LORAMAC_STATUS_OK )
     {
         return LORAMAC_HANDLER_ERROR;
