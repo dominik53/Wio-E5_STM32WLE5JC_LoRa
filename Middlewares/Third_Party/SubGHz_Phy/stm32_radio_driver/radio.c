@@ -41,10 +41,10 @@
 #include "mw_log_conf.h"
 
 
-#define RADIO_LOG_DEBUG 0 // todo delete
+#define RADIO_LOG_DEBUG 0
 
 #if RADIO_LOG_DEBUG == 1
-#include "sys_app.h" // todo delete, only for log function
+#include "sys_app.h"
 #endif
 
 /* Private typedef -----------------------------------------------------------*/
@@ -873,7 +873,7 @@ static void RadioSetRxConfig( RadioModems_t modem, uint32_t bandwidth,
                               bool iqInverted, bool rxContinuous )
 {
 #if RADIO_LOG_DEBUG == 1
-	APP_LOG(TS_OFF, VLEVEL_M, "RadioSetRxConfig, bandwidth: %d, datarate: %d, coderate: %d, preambleLen: %d, symbTimeout: %d, fixLen: %s, payloadLen: %d, crcOn: %s, freqHopOn: %s, iqInverted: %s, rxContinuous: %s\n\r", bandwidth, datarate, coderate, preambleLen, symbTimeout, fixLen ? "true" : "false", payloadLen, crcOn ? "true" : "false", freqHopOn ? "true" : "false", iqInverted ? "true" : "false", rxContinuous ? "true" : "false");  // todo delete, only for log function
+	APP_LOG(TS_OFF, VLEVEL_M, "RadioSetRxConfig, bandwidth: %d, datarate: %d, coderate: %d, preambleLen: %d, symbTimeout: %d, fixLen: %s, payloadLen: %d, crcOn: %s, freqHopOn: %s, iqInverted: %s, rxContinuous: %s\n\r", bandwidth, datarate, coderate, preambleLen, symbTimeout, fixLen ? "true" : "false", payloadLen, crcOn ? "true" : "false", freqHopOn ? "true" : "false", iqInverted ? "true" : "false", rxContinuous ? "true" : "false");
 #endif
 
 #if (RADIO_SIGFOX_ENABLE == 1)
@@ -1470,7 +1470,7 @@ static void RadioStandby( void )
 static void RadioRx( uint32_t timeout )
 {
 #if RADIO_LOG_DEBUG == 1
-	APP_LOG(TS_OFF, VLEVEL_M, "RadioRx, timeout: %d\n\r", timeout); //todo delete
+	APP_LOG(TS_OFF, VLEVEL_M, "RadioRx, timeout: %d\n\r", timeout);
 #endif
 
 #if( RADIO_LR_FHSS_IS_ON == 1 )
@@ -1516,7 +1516,7 @@ static void RadioRx( uint32_t timeout )
 static void RadioRxBoosted( uint32_t timeout )
 {
 #if RADIO_LOG_DEBUG == 1
-	APP_LOG(TS_OFF, VLEVEL_M, "RadioRxBoosted, timeout: %d\n\r", timeout); //todo delete
+	APP_LOG(TS_OFF, VLEVEL_M, "RadioRxBoosted, timeout: %d\n\r", timeout);
 #endif
 
 #if( RADIO_LR_FHSS_IS_ON == 1 )
@@ -1561,7 +1561,7 @@ static void RadioRxBoosted( uint32_t timeout )
 static void RadioSetRxDutyCycle( uint32_t rxTime, uint32_t sleepTime )
 {
 #if RADIO_LOG_DEBUG == 1
-	APP_LOG(TS_OFF, VLEVEL_M, "RadioSetRxDutyCycle, rxTime: %d, sleepTime: %d\n\r", rxTime, sleepTime); //todo delete
+	APP_LOG(TS_OFF, VLEVEL_M, "RadioSetRxDutyCycle, rxTime: %d, sleepTime: %d\n\r", rxTime, sleepTime);
 #endif
 
     /*See STM32WL Errata: RadioSetRxDutyCycle*/
