@@ -984,6 +984,7 @@ static void OnRadioRxError( void )
     LoRaMacRadioEvents.Events.RxError = 1;
 
     OnMacProcessNotify( );
+    MW_LOG(TS_ON, VLEVEL_M, "MAC rxError\r\n" );
 }
 
 static void OnRadioRxTimeout( void )
@@ -4636,7 +4637,7 @@ LoRaMacStatus_t LoRaMacInitialization( LoRaMacPrimitives_t* primitives, LoRaMacC
 
     // Init parameters which are not set in function ResetMacParameters
     Nvm.MacGroup2.MacParamsDefaults.ChannelsNbTrans = 1;
-    Nvm.MacGroup2.MacParamsDefaults.SystemMaxRxError = 10;
+    Nvm.MacGroup2.MacParamsDefaults.SystemMaxRxError = 100; // bylo 10, 100 NAPRAWILO PROBLEM
     Nvm.MacGroup2.MacParamsDefaults.MinRxSymbols = 6;
 
     Nvm.MacGroup2.MacParams.SystemMaxRxError = Nvm.MacGroup2.MacParamsDefaults.SystemMaxRxError;
@@ -5779,7 +5780,7 @@ LoRaMacStatus_t LoRaMacMibSetRequestConfirm( MibRequestConfirm_t* mibSet )
 #if (defined( LORAMAC_VERSION ) && (( LORAMAC_VERSION == 0x01000400 ) || ( LORAMAC_VERSION == 0x01010100 )))
             if( mibSet->Param.SystemMaxRxError <= 500 )
             { // Only apply the new value if in range 0..500 ms else keep current value.
-            	Nvm.MacGroup2.MacParams.SystemMaxRxError = Nvm.MacGroup2.MacParamsDefaults.SystemMaxRxError = mibSet->Param.SystemMaxRxError;
+            	Nvm.MacGroup2.MacParams.SystemMaxRxError = Nvm.MacGroup2.MacParamsDefaults.SystemMaxRxError = mibSet->Param.SystemMaxRxError; // todo
             }
             else
             {

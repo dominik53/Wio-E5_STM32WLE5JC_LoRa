@@ -41,7 +41,7 @@
 #include "mw_log_conf.h"
 
 
-#define RADIO_LOG_DEBUG 1 // todo delete
+#define RADIO_LOG_DEBUG 0 // todo delete
 
 #if RADIO_LOG_DEBUG == 1
 #include "sys_app.h" // todo delete, only for log function
@@ -873,8 +873,6 @@ static void RadioSetRxConfig( RadioModems_t modem, uint32_t bandwidth,
                               bool iqInverted, bool rxContinuous )
 {
 #if RADIO_LOG_DEBUG == 1
-//	crcOn = true;
-//	symbTimeout = 12;
 	APP_LOG(TS_OFF, VLEVEL_M, "RadioSetRxConfig, bandwidth: %d, datarate: %d, coderate: %d, preambleLen: %d, symbTimeout: %d, fixLen: %s, payloadLen: %d, crcOn: %s, freqHopOn: %s, iqInverted: %s, rxContinuous: %s\n\r", bandwidth, datarate, coderate, preambleLen, symbTimeout, fixLen ? "true" : "false", payloadLen, crcOn ? "true" : "false", freqHopOn ? "true" : "false", iqInverted ? "true" : "false", rxContinuous ? "true" : "false");  // todo delete, only for log function
 #endif
 
