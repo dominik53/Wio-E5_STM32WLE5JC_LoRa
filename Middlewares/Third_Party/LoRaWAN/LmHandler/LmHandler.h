@@ -817,6 +817,10 @@ LmHandlerErrorStatus_t LmHandlerGetVersion( LmHandlerVersionType_t lmhType, uint
  */
 LmHandlerErrorStatus_t LmHandlerNvmDataStore( void );
 
+
+uint8_t lmHandler_getRxTimeout(void);
+void lmHandler_setRxTimeout(uint8_t value);
+
 #ifdef __cplusplus
 }
 #endif

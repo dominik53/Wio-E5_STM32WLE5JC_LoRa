@@ -484,6 +484,10 @@ LoRaMacStatus_t LoRaMacProcessMicForDatablock( uint8_t *buffer, uint32_t size, u
  */
 void LoRaMacReset( void );
 
+
+uint8_t mac_getRxTimeout(void);
+void mac_setRxTimeout(uint8_t value);
+
 /*! \} defgroup LORAMAC */
 
 #ifdef __cplusplus

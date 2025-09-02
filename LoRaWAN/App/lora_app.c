@@ -89,6 +89,67 @@ typedef enum TxEventType_e
 
 /* USER CODE BEGIN PD */
 static const char *slotStrings[] = { "1", "2", "C", "C_MC", "P", "P_MC" };
+
+#define MAX_PHY_PAYLOAD_LEN	255
+#define TX_RETRY_PERIOD	100
+#define MEASUREMENT_PERIOD	5000
+#define CONFIGURATIONS_NUM	1
+
+typedef enum
+{
+	NO_ERROR = 0,		// no error
+	ERROR_TIMEOUT_TX,	// timeout tx
+	ERROR_TIMEOUT_RX,	// timeout rx
+	ERROR_RX,			// error rx, for example wrong crc
+	ERROR_PAYLOAD		// data received not the same as transmitted
+} Error_Code_t;
+
+typedef struct
+{
+	uint32_t RoundTripTime; // could be cast to uint16_t == up to 65535 ms
+	int16_t RssiValue; /* Last  Received packer Rssi*/
+	int8_t SnrValue; /* Last  Received packer SNR (in Lora modulation)*/
+	uint16_t TxBitRate; // equals: PayloadLen / TxTime
+	Error_Code_t ErrorCode;	/* 0 - 4  */
+
+} SubGhz_Measurements_t;	// last received data
+
+typedef struct
+{
+	uint8_t PacketsReceived; // for PacketDeliveryRatio
+	float PacketDeliveryRatio;
+	SubGhz_Measurements_t Measurements[MEASUREMENTS_NUM];
+
+} SubGhz_MeasurementsCollection_t;// all measurements collected for 1 configuration, for example 20 repetitions; SubGhz_MeasurementsCollection_t Collection[12] -> 12 configurations, each 20 repetitions
+
+static const uint8_t txMessage[MAX_PHY_PAYLOAD_LEN] =
+	{"Moja wiadomosc do przeprowadzania testow konfiguracji lora, ta wiadomosc jest przesylana z nadajnika do odbiornika i spowrotem jako echo w celu zbadania Round Trip Time. Dzieki temu w nadajniku mozliwe jest zbieranie danych wlasciwych dla nadajnika i odb"};
+static uint8_t rxMessage[MAX_PHY_PAYLOAD_LEN];
+static uint8_t rxMessageLen = 0;
+
+static UTIL_TIMER_Object_t TxRetryTimer;
+static UTIL_TIMER_Object_t measurementTimer;
+static uint8_t loggedBusy = 0;	// flaga zeby ograniczyc spam na uart
+static uint8_t rxTimeoutCnt = 0;	// info ktory rx obslugujemy, w klasach a i b przed rozpoczeciem nowego pomiaru czegamy na RX2
+static uint8_t echoMode = 0;	// only send echo to gate
+static uint8_t startMeasurements = 0; // LORA_TRANSMITER flag to start measuring
+static uint8_t waitingForNode2rx = 0;	// czekamy na odp z drugiego urzadzenia
+static uint8_t receivedNode2Frame = 0;	// czy dostalismy odp z node
+
+#if LORA_DIRECTION == LORA_RECEIVER
+static uint8_t txPending = 0;	// after rx for echo tx
+#endif
+
+static uint32_t txTimestamp = 0; /* transmitted timestamp */
+static uint32_t txTimestampEnd = 0; /* end of transmition timestamp */
+static uint32_t rxTimestamp = 0; /* received timestamp */
+
+static uint8_t ConfigurationNum = 0; // which LoRa configuration is tested now
+static uint8_t MeasurementNum = 0; // which configurations measurement is tested now
+
+static SubGhz_MeasurementsCollection_t Collection[CONFIGURATIONS_NUM];
+
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -215,6 +276,15 @@ static void OnPingSlotPeriodicityChanged(uint8_t pingSlotPeriodicity);
 static void OnSystemReset(void);
 
 /* USER CODE BEGIN PFP */
+static void logInitData(void); // log software data
+static void waitForInput(const char *message1, const char *message2);
+//static GPIO_PinState checkInput2(void);
+static void OnTxRetryTimerEvent(void *context);
+static void OnMeasurementTimerEvent(void *context);
+static void ExportMeasurementsAsCSV(void);
+static void CalculatePDR(void);
+static void nextMeasurement(uint8_t incMeasurement);
+
 
 /* USER CODE END PFP */
 
@@ -272,7 +342,7 @@ static LmHandlerParams_t LmHandlerParams =
 /**
   * @brief Type of Event to generate application Tx
   */
-static TxEventType_t EventType = TX_ON_TIMER;
+static TxEventType_t EventType = TX_ON_EVENT;
 
 /**
   * @brief Timer to handle the application Tx
@@ -310,48 +380,16 @@ static LmHandlerAppData_t AppData = { 0, 0, AppDataBuffer };
 void LoRaWAN_Init(void)
 {
   /* USER CODE BEGIN LoRaWAN_Init_LV */
-  uint32_t feature_version = 0UL;
+	APP_LOG(TS_ON, VLEVEL_M, "PROGRAM BEGAN\n\r");
   /* USER CODE END LoRaWAN_Init_LV */
 
   /* USER CODE BEGIN LoRaWAN_Init_1 */
+	logInitData(); /* Get LoRaWAN APP version*/
 
-  /* Get LoRaWAN APP version*/
-  APP_LOG(TS_OFF, VLEVEL_M, "APPLICATION_VERSION: V%X.%X.%X\r\n",
-          (uint8_t)(APP_VERSION_MAIN),
-          (uint8_t)(APP_VERSION_SUB1),
-          (uint8_t)(APP_VERSION_SUB2));
-
-  /* Get MW LoRaWAN info */
-  APP_LOG(TS_OFF, VLEVEL_M, "MW_LORAWAN_VERSION:  V%X.%X.%X\r\n",
-          (uint8_t)(LORAWAN_VERSION_MAIN),
-          (uint8_t)(LORAWAN_VERSION_SUB1),
-          (uint8_t)(LORAWAN_VERSION_SUB2));
-
-  /* Get MW SubGhz_Phy info */
-  APP_LOG(TS_OFF, VLEVEL_M, "MW_RADIO_VERSION:    V%X.%X.%X\r\n",
-          (uint8_t)(SUBGHZ_PHY_VERSION_MAIN),
-          (uint8_t)(SUBGHZ_PHY_VERSION_SUB1),
-          (uint8_t)(SUBGHZ_PHY_VERSION_SUB2));
-
-  /* Get LoRaWAN Link Layer info */
-  LmHandlerGetVersion(LORAMAC_HANDLER_L2_VERSION, &feature_version);
-  APP_LOG(TS_OFF, VLEVEL_M, "L2_SPEC_VERSION:     V%X.%X.%X\r\n",
-          (uint8_t)(feature_version >> 24),
-          (uint8_t)(feature_version >> 16),
-          (uint8_t)(feature_version >> 8));
-
-  /* Get LoRaWAN Regional Parameters info */
-  LmHandlerGetVersion(LORAMAC_HANDLER_REGION_VERSION, &feature_version);
-  APP_LOG(TS_OFF, VLEVEL_M, "RP_SPEC_VERSION:     V%X-%X.%X.%X\r\n",
-          (uint8_t)(feature_version >> 24),
-          (uint8_t)(feature_version >> 16),
-          (uint8_t)(feature_version >> 8),
-          (uint8_t)(feature_version));
-
-  if (FLASH_IF_Init(NULL) != FLASH_IF_OK)
-  {
-    Error_Handler();
-  }
+	if (FLASH_IF_Init(NULL) != FLASH_IF_OK)
+	{
+		Error_Handler();
+	}
 
   /* USER CODE END LoRaWAN_Init_1 */
 
@@ -372,7 +410,34 @@ void LoRaWAN_Init(void)
   LmHandlerConfigure(&LmHandlerParams);
 
   /* USER CODE BEGIN LoRaWAN_Init_2 */
+	UTIL_TIMER_Create(&TxRetryTimer, TX_RETRY_PERIOD, UTIL_TIMER_ONESHOT, OnTxRetryTimerEvent, NULL);
+	UTIL_TIMER_Create(&measurementTimer, MEASUREMENT_PERIOD, UTIL_TIMER_ONESHOT, OnMeasurementTimerEvent, NULL);
 
+	LmHandlerJoin(ActivationType, ForceRejoin);
+//    if(LORAWAN_DEFAULT_CLASS == CLASS_A)
+//    {
+//    	APP_LOG(TS_OFF, VLEVEL_M, "default class A\r\n");
+//
+//    }
+//    else
+//    {
+//    	LmHandlerErrorStatus_t status = LmHandlerRequestClass(LORAWAN_DEFAULT_CLASS);
+//    	APP_LOG(TS_OFF, VLEVEL_M, "requested to change class to %c, status: %d\r\n", "ABC"[LORAWAN_DEFAULT_CLASS], status);
+////    	LoRaMacStart();
+//    }
+
+	if (EventType == TX_ON_TIMER)
+	{
+		/* send every time timer elapses */
+		UTIL_TIMER_Create(&TxTimer, 5000, UTIL_TIMER_ONESHOT, OnTxTimerEvent, NULL);
+		UTIL_TIMER_Start(&TxTimer);
+	}
+	else if (EventType == TX_ON_EVENT)
+	{
+
+	}
+
+	return;
   /* USER CODE END LoRaWAN_Init_2 */
 
   LmHandlerJoin(ActivationType, ForceRejoin);
@@ -433,173 +498,222 @@ static void OnRxData(LmHandlerAppData_t *appData, LmHandlerRxParams_t *params)
 	APP_LOG(TS_ON, VLEVEL_M, "OnRxData\n\r");
 #endif
 
-  uint8_t RxPort = 0;
+	rxTimestamp = HAL_GetTick();
+	Collection[ConfigurationNum].Measurements[MeasurementNum].RoundTripTime = rxTimestamp - txTimestamp;
 
-  if (params != NULL)
-  {
-    if (params->IsMcpsIndication)
-    {
-      if (appData != NULL)
-      {
-        RxPort = appData->Port;
-        if (appData->Buffer != NULL)
-        {
-          switch (appData->Port)
-          {
-            case LORAWAN_SWITCH_CLASS_PORT:
-              /*this port switches the class*/
-              if (appData->BufferSize == 1)
-              {
-                switch (appData->Buffer[0])
-                {
-                  case 0:
-                  {
-                    LmHandlerRequestClass(CLASS_A);
-                    break;
-                  }
-                  case 1:
-                  {
-                    LmHandlerRequestClass(CLASS_B);
-                    break;
-                  }
-                  case 2:
-                  {
-                    LmHandlerRequestClass(CLASS_C);
-                    break;
-                  }
-                  default:
-                    break;
-                }
-              }
-              break;
-            case LORAWAN_USER_APP_PORT:
-              if (appData->BufferSize == 1)
-              {
+	uint8_t RxPort = 0;
 
-              }
-              break;
+	if (params != NULL)
+	{
+		if (params->IsMcpsIndication)
+		{
+			if (appData != NULL)
+			{
+				if(LORAWAN_DEFAULT_CLASS != CLASS_C)
+				{
+					Collection[ConfigurationNum].PacketsReceived++;
+				}
 
-            default:
+				RxPort = appData->Port;
+				if (appData->Buffer != NULL)
+				{
+					switch (appData->Port)
+					{
+					case LORAWAN_SWITCH_CLASS_PORT:
+						/*this port switches the class*/
+						if (appData->BufferSize == 1)
+						{
+							APP_LOG(TS_ON, VLEVEL_M, "Received switch class to %d\n\r", appData->Buffer[0]);
+							LmHandlerErrorStatus_t changeClassStatus;
 
-              break;
-          }
-        }
-      }
-    }
-    if (params->RxSlot < RX_SLOT_NONE)
-    {
-      APP_LOG(TS_OFF, VLEVEL_H, "###### D/L FRAME:%04d | PORT:%d | DR:%d | SLOT:%s | RSSI:%d | SNR:%d\r\n",
-              params->DownlinkCounter, RxPort, params->Datarate, slotStrings[params->RxSlot],
-              params->Rssi, params->Snr);
-    }
-  }
+							switch (appData->Buffer[0])
+							{
+							case 0:
+							{
+								changeClassStatus = LmHandlerRequestClass(CLASS_A);
+								break;
+							}
+							case 1:
+							{
+								changeClassStatus = LmHandlerRequestClass(CLASS_B);
+								break;
+							}
+							case 2:
+							{
+								changeClassStatus = LmHandlerRequestClass(CLASS_C);
+								break;
+							}
+							default:
+								APP_LOG(TS_ON, VLEVEL_M, "ERROR default class\n\r");
+								break;
+							}
+
+							APP_LOG(TS_ON, VLEVEL_M, "Class change status: %d\n\r", changeClassStatus);
+
+							DeviceClass_t myClass;
+							LmHandlerErrorStatus_t classStatus = LmHandlerGetCurrentClass(&myClass);
+							APP_LOG(TS_ON, VLEVEL_M, "Class status: %d\n\r", classStatus);
+							APP_LOG(TS_OFF, VLEVEL_M, "*** MY NEW CLASS: %d ***\n\r", myClass);
+						}
+						else
+							APP_LOG(TS_ON, VLEVEL_M, "Received switch class but BufferSize != 1 !!!!!!!\n\r");
+
+						break;
+					case LORAWAN_USER_APP_PORT:
+						if (appData->BufferSize > 0)
+						{
+#if LORA_DIRECTION == LORA_RECEIVER
+							if(echoMode)
+							{
+								memcpy(rxMessage, appData->Buffer, appData->BufferSize);
+								rxMessageLen = appData->BufferSize;
+								txPending = 1;
+							}
+#else
+							if(LORAWAN_DEFAULT_CLASS == CLASS_C)
+							{
+								rxTimestamp = HAL_GetTick();
+								Collection[ConfigurationNum].Measurements[MeasurementNum].RoundTripTime = rxTimestamp - txTimestamp;
+								Collection[ConfigurationNum].PacketsReceived++;
+
+								receivedNode2Frame = 1;
+								if (appData->BufferSize <= APP_PAYLOAD_LEN)
+								{
+									uint8_t payloadIsAccurate = 1;
+									for (uint16_t index = 0; index < APP_PAYLOAD_LEN - 1; index++)
+									{
+										if (appData->Buffer[index + 1] != txMessage[index]) // pierwszy bajt == 0
+											payloadIsAccurate = 0;
+									}
+
+									if (!payloadIsAccurate)
+									{
+										Collection[ConfigurationNum].Measurements[MeasurementNum].ErrorCode = ERROR_PAYLOAD;
+									}
+								}
+								else
+								{
+									APP_LOG(TS_ON, VLEVEL_M,
+											"!!! appData->BufferSize <= APP_PAYLOAD_LEN NOT TRUE !!!\n\r");
+									Collection[ConfigurationNum].Measurements[MeasurementNum].ErrorCode =
+											ERROR_PAYLOAD;
+								}
+							}
+#endif
+
+							appData->Buffer[appData->BufferSize] = 0;
+							APP_LOG(TS_ON, VLEVEL_M, "Received data: %s\n\r", appData->Buffer);
+						}
+						else
+							APP_LOG(TS_ON, VLEVEL_M, "Received data, bufferSize: 0\n\r");
+						break;
+
+					default:
+						APP_LOG(TS_ON, VLEVEL_M, "Received data on unknown port\n\r");
+						break;
+					}
+				}
+				else
+					APP_LOG(TS_ON, VLEVEL_M, "Received appData->Buffer == NULL\n\r");
+			}
+			else
+				APP_LOG(TS_ON, VLEVEL_M, "Received appData == NULL\n\r");
+		}
+		else
+			APP_LOG(TS_ON, VLEVEL_M, "Received IsMcpsIndication == NULL\n\r");
+
+		if (params->RxSlot < RX_SLOT_NONE)
+		{
+			Collection[ConfigurationNum].Measurements[MeasurementNum].RssiValue = params->Rssi;
+			Collection[ConfigurationNum].Measurements[MeasurementNum].SnrValue = params->Snr;
+
+			APP_LOG(TS_OFF, VLEVEL_H,
+					"###### D/L FRAME:%04d | PORT:%d | DR:%d | SLOT:%s | RSSI:%d | SNR:%d\r\n",
+					params->DownlinkCounter, RxPort, params->Datarate,
+					slotStrings[params->RxSlot], params->Rssi, params->Snr);
+		}
+		else
+		{
+			Collection[ConfigurationNum].Measurements[MeasurementNum].RssiValue = 4;
+			Collection[ConfigurationNum].Measurements[MeasurementNum].SnrValue = 4;
+		}
+	}
+	else
+		APP_LOG(TS_ON, VLEVEL_M, "Received params == NULL\n\r");
+
+	nextMeasurement(1);
   /* USER CODE END OnRxData_1 */
 }
 
 static void SendTxData(void)
 {
   /* USER CODE BEGIN SendTxData_1 */
-  LmHandlerErrorStatus_t status = LORAMAC_HANDLER_ERROR;
-  uint8_t batteryLevel = GetBatteryLevel();
-  sensor_t sensor_data;
-  UTIL_TIMER_Time_t nextTxIn = 0;
+	LmHandlerErrorStatus_t status = LORAMAC_HANDLER_ERROR;
+	UTIL_TIMER_Time_t nextTxIn = 0;
 
-  if (LmHandlerIsBusy() == false)
-  {
-#ifdef CAYENNE_LPP
-    uint8_t channel = 0;
-#else
-    uint16_t pressure = 0;
-    int16_t temperature = 0;
-    uint16_t humidity = 0;
-    uint32_t i = 0;
-    int32_t latitude = 0;
-    int32_t longitude = 0;
-    uint16_t altitudeGps = 0;
-#endif /* CAYENNE_LPP */
+	if (LmHandlerIsBusy() == false)
+	{
+		loggedBusy = 0;
+		AppData.Port = LORAWAN_USER_APP_PORT;
 
-    EnvSensors_Read(&sensor_data);
+		if(echoMode) // receiver w trybie echo
+		{
+			uint8_t i;
+			for (i = 0; i < rxMessageLen; i++)
+			{
+				AppData.Buffer[i] = rxMessage[i];
+			}
+			AppData.BufferSize = i;
+		}
+		else // transmitter
+		{
+			uint8_t i;
+			for (i = 0; i < APP_PAYLOAD_LEN; i++)
+			{
+				if (i != 0)
+				{
+					AppData.Buffer[i] = txMessage[i - 1];
+				}
+				else	// i == 0, pierwszy bajt to 0, tak bylo w przykladzie i mi nie przeszkadza
+				{
+					AppData.Buffer[i] = 0u;
+				}
+			}
+			AppData.BufferSize = i;
+		}
 
-    APP_LOG(TS_ON, VLEVEL_M, "VDDA: %d\r\n", batteryLevel);
-    APP_LOG(TS_ON, VLEVEL_M, "temp: %d\r\n", (int16_t)(sensor_data.temperature));
+		if(startMeasurements)
+			waitingForNode2rx = 1;
 
-    AppData.Port = LORAWAN_USER_APP_PORT;
+		MeasurementNum++;
+		txTimestamp = HAL_GetTick();
+		status = LmHandlerSend(&AppData, LmHandlerParams.IsTxConfirmed, false);
+		if (LORAMAC_HANDLER_SUCCESS == status)
+		{
+			APP_LOG(TS_ON, VLEVEL_M, "SEND REQUEST\r\n");
+		}
+		else if (LORAMAC_HANDLER_DUTYCYCLE_RESTRICTED == status)
+		{
+			nextTxIn = LmHandlerGetDutyCycleWaitTime();
+			if (nextTxIn > 0)
+			{
+				APP_LOG(TS_ON, VLEVEL_L, "Next Tx in  : ~%d second(s)\r\n", (nextTxIn / 1000));
+				// todo moze byc tutaj potrzebne: UTIL_TIMER_Start(&TxRetryTimer);
+			}
+		}
+		else
+			APP_LOG(TS_ON, VLEVEL_M, "ERROR: send status: %d\r\n", status);
+	}
+	else
+	{
+		if(!loggedBusy)
+		{
+			loggedBusy = 1;
+			APP_LOG(TS_ON, VLEVEL_M, "LmHandler is busy!!!!!\r\n");
+		}
 
-#ifdef CAYENNE_LPP
-    CayenneLppReset();
-    CayenneLppAddBarometricPressure(channel++, sensor_data.pressure);
-    CayenneLppAddTemperature(channel++, sensor_data.temperature);
-    CayenneLppAddRelativeHumidity(channel++, (uint16_t)(sensor_data.humidity));
-
-    if ((LmHandlerParams.ActiveRegion != LORAMAC_REGION_US915) && (LmHandlerParams.ActiveRegion != LORAMAC_REGION_AU915)
-        && (LmHandlerParams.ActiveRegion != LORAMAC_REGION_AS923))
-    {
-      CayenneLppAddDigitalInput(channel++, GetBatteryLevel());
-      CayenneLppAddDigitalOutput(channel++, AppLedStateOn);
-    }
-
-    CayenneLppCopy(AppData.Buffer);
-    AppData.BufferSize = CayenneLppGetSize();
-#else  /* not CAYENNE_LPP */
-    humidity    = (uint16_t)(sensor_data.humidity * 10);            /* in %*10     */
-    temperature = (int16_t)(sensor_data.temperature);
-    pressure = (uint16_t)(sensor_data.pressure * 100 / 10); /* in hPa / 10 */
-
-    AppData.Buffer[i++] = 0u;
-    AppData.Buffer[i++] = (uint8_t)((pressure >> 8) & 0xFF);
-    AppData.Buffer[i++] = (uint8_t)(pressure & 0xFF);
-    AppData.Buffer[i++] = (uint8_t)(temperature & 0xFF);
-    AppData.Buffer[i++] = (uint8_t)((humidity >> 8) & 0xFF);
-    AppData.Buffer[i++] = (uint8_t)(humidity & 0xFF);
-
-    if ((LmHandlerParams.ActiveRegion == LORAMAC_REGION_US915) || (LmHandlerParams.ActiveRegion == LORAMAC_REGION_AU915)
-        || (LmHandlerParams.ActiveRegion == LORAMAC_REGION_AS923))
-    {
-      AppData.Buffer[i++] = 0;
-      AppData.Buffer[i++] = 0;
-      AppData.Buffer[i++] = 0;
-      AppData.Buffer[i++] = 0;
-    }
-    else
-    {
-      latitude = sensor_data.latitude;
-      longitude = sensor_data.longitude;
-
-      AppData.Buffer[i++] = GetBatteryLevel();        /* 1 (very low) to 254 (fully charged) */
-      AppData.Buffer[i++] = (uint8_t)((latitude >> 16) & 0xFF);
-      AppData.Buffer[i++] = (uint8_t)((latitude >> 8) & 0xFF);
-      AppData.Buffer[i++] = (uint8_t)(latitude & 0xFF);
-      AppData.Buffer[i++] = (uint8_t)((longitude >> 16) & 0xFF);
-      AppData.Buffer[i++] = (uint8_t)((longitude >> 8) & 0xFF);
-      AppData.Buffer[i++] = (uint8_t)(longitude & 0xFF);
-      AppData.Buffer[i++] = (uint8_t)((altitudeGps >> 8) & 0xFF);
-      AppData.Buffer[i++] = (uint8_t)(altitudeGps & 0xFF);
-    }
-
-    AppData.BufferSize = i;
-#endif /* CAYENNE_LPP */
-
-    status = LmHandlerSend(&AppData, LmHandlerParams.IsTxConfirmed, false);
-    if (LORAMAC_HANDLER_SUCCESS == status)
-    {
-      APP_LOG(TS_ON, VLEVEL_L, "SEND REQUEST\r\n");
-    }
-    else if (LORAMAC_HANDLER_DUTYCYCLE_RESTRICTED == status)
-    {
-      nextTxIn = LmHandlerGetDutyCycleWaitTime();
-      if (nextTxIn > 0)
-      {
-        APP_LOG(TS_ON, VLEVEL_L, "Next Tx in  : ~%d second(s)\r\n", (nextTxIn / 1000));
-      }
-    }
-  }
-
-  if (EventType == TX_ON_TIMER)
-  {
-    UTIL_TIMER_Stop(&TxTimer);
-    UTIL_TIMER_SetPeriod(&TxTimer, MAX(nextTxIn, TxPeriodicity));
-    UTIL_TIMER_Start(&TxTimer);
-  }
+		UTIL_TIMER_Start(&TxRetryTimer);
+	}
 
   /* USER CODE END SendTxData_1 */
 }
@@ -610,6 +724,7 @@ static void OnTxTimerEvent(void *context)
 #if APP_LOG_EVENTS_ENABLED == 1
 	APP_LOG(TS_ON, VLEVEL_M, "OnTxTimerEvent\n\r");
 #endif
+	return;
   /* USER CODE END OnTxTimerEvent_1 */
   UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_LoRaSendOnTxTimerOrButtonEvent), CFG_SEQ_Prio_0);
 
@@ -621,6 +736,209 @@ static void OnTxTimerEvent(void *context)
 }
 
 /* USER CODE BEGIN PrFD_LedEvents */
+// PRIVATE FUNCTIONS
+static void logInitData(void)
+{
+#if APP_LOG_SOFTWARE_ENABLED
+	uint32_t feature_version = 0UL;
+
+	APP_LOG(TS_OFF, VLEVEL_M, "APPLICATION_VERSION: V%X.%X.%X\r\n",
+			(uint8_t)(APP_VERSION_MAIN), (uint8_t)(APP_VERSION_SUB1),
+			(uint8_t)(APP_VERSION_SUB2));
+
+	/* Get MW LoRaWAN info */
+	APP_LOG(TS_OFF, VLEVEL_M, "MW_LORAWAN_VERSION:  V%X.%X.%X\r\n",
+			(uint8_t)(LORAWAN_VERSION_MAIN), (uint8_t)(LORAWAN_VERSION_SUB1),
+			(uint8_t)(LORAWAN_VERSION_SUB2));
+
+	/* Get MW SubGhz_Phy info */
+	APP_LOG(TS_OFF, VLEVEL_M, "MW_RADIO_VERSION:    V%X.%X.%X\r\n",
+			(uint8_t)(SUBGHZ_PHY_VERSION_MAIN),
+			(uint8_t)(SUBGHZ_PHY_VERSION_SUB1),
+			(uint8_t)(SUBGHZ_PHY_VERSION_SUB2));
+
+	/* Get LoRaWAN Link Layer info */
+	LmHandlerGetVersion(LORAMAC_HANDLER_L2_VERSION, &feature_version);
+	APP_LOG(TS_OFF, VLEVEL_M, "L2_SPEC_VERSION:     V%X.%X.%X\r\n",
+			(uint8_t )(feature_version >> 24),
+			(uint8_t )(feature_version >> 16), (uint8_t )(feature_version >> 8));
+
+	/* Get LoRaWAN Regional Parameters info */
+	LmHandlerGetVersion(LORAMAC_HANDLER_REGION_VERSION, &feature_version);
+	APP_LOG(TS_OFF, VLEVEL_M, "RP_SPEC_VERSION:     V%X-%X.%X.%X\r\n",
+			(uint8_t )(feature_version >> 24),
+			(uint8_t )(feature_version >> 16), (uint8_t )(feature_version >> 8),
+			(uint8_t )(feature_version));
+#endif
+}
+
+
+static void waitForInput(const char *message1, const char *message2)
+{
+	APP_LOG(TS_ON, VLEVEL_M, message1);
+	while (1)
+	{
+		HAL_Delay(50);
+		if (HAL_GPIO_ReadPin(BUTTON_SW1_GPIO_PORT, BUTTON_SW1_PIN)
+				== GPIO_PIN_RESET)
+		{
+			while (1)
+			{
+				HAL_Delay(50);
+				if (HAL_GPIO_ReadPin(BUTTON_SW1_GPIO_PORT, BUTTON_SW1_PIN)
+						== GPIO_PIN_SET)
+					break;
+			}
+
+			APP_LOG(TS_ON, VLEVEL_M, message2);
+			break;
+		}
+	}
+}
+
+
+//static GPIO_PinState checkInput2(void)
+//{
+//	return HAL_GPIO_ReadPin(BUTTON_SW2_GPIO_PORT, BUTTON_SW2_PIN);
+//}
+
+
+static void OnTxRetryTimerEvent(void *context)
+{
+	nextMeasurement(0);
+}
+
+static void OnMeasurementTimerEvent(void *context)
+{
+	// start timer, w obsludze sprawdzmy czy przyszla wiadomosc, jesli nie to errorCode timeout i next, jesli tak to next
+	waitingForNode2rx = 0;
+
+	if(receivedNode2Frame)
+	{
+		receivedNode2Frame = 0;
+	}
+	else
+	{
+		Collection[ConfigurationNum].Measurements[MeasurementNum].ErrorCode = ERROR_TIMEOUT_RX;
+	}
+
+	UTIL_TIMER_Stop(&measurementTimer);
+	UTIL_TIMER_SetPeriod(&measurementTimer, MEASUREMENT_PERIOD);
+
+	nextMeasurement(1);
+}
+
+static void ExportMeasurementsAsCSV(void)
+{
+	APP_LOG(TS_OFF, VLEVEL_M, "\nExported data:\n\n\r");
+
+	// first CSV
+	APP_LOG(TS_OFF, VLEVEL_M, "CSV:PDR_data\n\r");
+	APP_LOG(TS_OFF, VLEVEL_M, "Config,PacketsReceived,PacketDeliveryRatio\n\r");
+	for (uint8_t config = 0; config < CONFIGURATIONS_NUM; config++)
+	{
+		APP_LOG(TS_OFF, VLEVEL_M, "%u,%u,%u\n\r", config, Collection[config].PacketsReceived,
+				(uint8_t)(Collection[config].PacketDeliveryRatio * 100));
+	}
+	APP_LOG(TS_OFF, VLEVEL_M, "\n\r");
+
+	// second CSV
+	APP_LOG(TS_OFF, VLEVEL_M, "CSV:Measurements_data\n\r");
+	APP_LOG(TS_OFF, VLEVEL_M, "Config,Measurement,RTT_ms,RSSI_dBm,SNR_dB,Bitrate_bps,ErrorCode\n\r");
+	for (uint8_t config = 0; config < CONFIGURATIONS_NUM; config++)
+	{
+		for (uint8_t i = 0; i < MEASUREMENTS_NUM; i++)
+		{
+			SubGhz_Measurements_t *m = &Collection[config].Measurements[i];
+
+			APP_LOG(TS_OFF, VLEVEL_M, "%d,%d,%d,%d,%d,%d,%d\n\r", config, i,
+					(unsigned long )m->RoundTripTime, m->RssiValue, m->SnrValue,
+					m->TxBitRate, m->ErrorCode);
+
+			HAL_Delay(15);
+		}
+	}
+	APP_LOG(TS_OFF, VLEVEL_M, "\n\r");
+}
+
+
+static void CalculatePDR(void)
+{
+	for (uint8_t configurationIndex = 0;
+			configurationIndex < CONFIGURATIONS_NUM; configurationIndex++)
+	{
+		Collection[configurationIndex].PacketDeliveryRatio = ((float)(Collection[configurationIndex].PacketsReceived) / MEASUREMENTS_NUM);
+	}
+}
+
+
+static void nextMeasurement(uint8_t incMeasurement)
+{
+	// reset timera na tx retry, zajmiemy sie tu obsluga tx
+	UTIL_TIMER_Stop(&TxRetryTimer);
+	UTIL_TIMER_SetPeriod(&TxRetryTimer, TX_RETRY_PERIOD);
+
+	// zlecamy kolejny pomiar (w przypadku problemow z wczesniejszym zleceniem)
+	if(incMeasurement == 0)
+	{
+		UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_LoRaSendOnTxTimerOrButtonEvent), CFG_SEQ_Prio_0);
+		return;
+	}
+
+
+
+	// inkrementujemy numer pomiaru i sprwadzamy koniec
+	if(MeasurementNum >= MEASUREMENTS_NUM && echoMode == 0)	// koniec badania
+	{
+		if(!waitingForNode2rx)
+		{
+			CalculatePDR();
+			ExportMeasurementsAsCSV();
+			APP_LOG(TS_ON, VLEVEL_M, "END OF PROGRAM\n\r");
+		}
+	}
+	else	// kolejny pomiar
+	{
+		if(((MeasurementNum >= 5 || echoMode > 0) && LORAWAN_DEFAULT_CLASS == CLASS_C) || startMeasurements)
+		{
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET); // LED on
+
+#if LORA_DIRECTION == LORA_TRANSMITER
+			if (!startMeasurements)
+			{
+				APP_LOG(TS_ON, VLEVEL_M, "***** STOP CONTINOUS TX *****\n\r");
+
+				MeasurementNum = 0;
+				startMeasurements = 1;
+			}
+
+			if(!waitingForNode2rx) // zaczynamy pomiar
+			{
+				UTIL_TIMER_Start(&measurementTimer);
+			}
+			else // pomiar w trakcie, czekamy
+			{
+				return;
+			}
+#else
+			echoMode = 1;
+			MeasurementNum = 0;
+			if(txPending)
+			{
+				UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_LoRaSendOnTxTimerOrButtonEvent), CFG_SEQ_Prio_0);
+			}
+			return;
+#endif
+		}
+		APP_LOG(TS_ON, VLEVEL_M, "***** MEASUREMENT NUM %d *****\n\r", MeasurementNum);
+		UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_LoRaSendOnTxTimerOrButtonEvent), CFG_SEQ_Prio_0);
+	}
+}
+
+
+
+
+
 
 /* USER CODE END PrFD_LedEvents */
 
@@ -631,12 +949,15 @@ static void OnTxData(LmHandlerTxParams_t *params)
 	APP_LOG(TS_ON, VLEVEL_M, "OnTxData\n\r");
 #endif
 
+	txTimestampEnd = HAL_GetTick();
+	Collection[ConfigurationNum].Measurements[MeasurementNum].TxBitRate = (APP_PAYLOAD_LEN * 8 * 1000) / (txTimestampEnd - txTimestamp); // *8 -> byte to bit, *1000 -> ms to s
+
   if ((params != NULL))
   {
     /* Process Tx event only if its a mcps response to prevent some internal events (mlme) */
     if (params->IsMcpsConfirm != 0)
     {
-      APP_LOG(TS_OFF, VLEVEL_M, "\r\n###### ========== MCPS-Confirm =============\r\n");
+//      APP_LOG(TS_OFF, VLEVEL_M, "\r\n###### ========== MCPS-Confirm =============\r\n");
       APP_LOG(TS_OFF, VLEVEL_H, "###### U/L FRAME:%04d | PORT:%d | DR:%d | PWR:%d", params->UplinkCounter,
               params->AppData.Port, params->Datarate, params->TxPower);
 
@@ -661,27 +982,42 @@ static void OnJoinRequest(LmHandlerJoinParams_t *joinParams)
 	APP_LOG(TS_ON, VLEVEL_M, "OnJoinRequest\n\r");
 #endif
 
-  if (joinParams != NULL)
-  {
-    if (joinParams->Status == LORAMAC_HANDLER_SUCCESS)
-    {
-      APP_LOG(TS_OFF, VLEVEL_M, "\r\n###### = JOINED = ");
-      if (joinParams->Mode == ACTIVATION_TYPE_ABP)
-      {
-        APP_LOG(TS_OFF, VLEVEL_M, "ABP ======================\r\n");
-      }
-      else
-      {
-        APP_LOG(TS_OFF, VLEVEL_M, "OTAA =====================\r\n");
-      }
-    }
-    else
-    {
-      APP_LOG(TS_OFF, VLEVEL_M, "\r\n###### = JOIN FAILED\r\n");
-    }
+	if (joinParams != NULL)
+	{
+		if (joinParams->Status == LORAMAC_HANDLER_SUCCESS)
+		{
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET); // LED on
+			APP_LOG(TS_OFF, VLEVEL_M, "\r\n###### = JOINED = ");
+			if (joinParams->Mode == ACTIVATION_TYPE_ABP)
+			{
+				APP_LOG(TS_OFF, VLEVEL_M, "ABP ======================\r\n");
+			}
+			else
+			{
+				APP_LOG(TS_OFF, VLEVEL_M, "OTAA =====================\r\n");
+			}
+		}
+		else
+		{
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET); // LED off
+			APP_LOG(TS_OFF, VLEVEL_M,
+					"\r\n###### = JOIN FAILED, status: %d\r\n",
+					joinParams->Status);
+		}
 
-    APP_LOG(TS_OFF, VLEVEL_H, "###### U/L FRAME:JOIN | DR:%d | PWR:%d\r\n", joinParams->Datarate, joinParams->TxPower);
-  }
+		APP_LOG(TS_OFF, VLEVEL_H, "###### U/L FRAME:JOIN | DR:%d | PWR:%d\r\n",
+				joinParams->Datarate, joinParams->TxPower);
+
+		waitForInput("Press button1 to start...\n\r", "Started measurements\n\r");
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET); // LED off
+
+		DeviceClass_t myClass;
+		LmHandlerErrorStatus_t classStatus = LmHandlerGetCurrentClass(&myClass);
+		APP_LOG(TS_ON, VLEVEL_M, "Class status: %d, my class: %d\n\r", classStatus, myClass);
+
+		MeasurementNum = 0;
+		nextMeasurement(0);
+	}
   /* USER CODE END OnJoinRequest_1 */
 }
 
@@ -741,6 +1077,9 @@ static void OnClassChange(DeviceClass_t deviceClass)
 #endif
 
   APP_LOG(TS_OFF, VLEVEL_M, "Switch to Class %c done\r\n", "ABC"[deviceClass]);
+
+//  LmHandlerJoin(ActivationType, ForceRejoin);
+
   /* USER CODE END OnClassChange_1 */
 }
 
@@ -754,6 +1093,42 @@ static void OnMacProcessNotify(void)
   UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_LmHandlerProcess), CFG_SEQ_Prio_0);
 
   /* USER CODE BEGIN OnMacProcessNotify_2 */
+  	if(lmHandler_getRxTimeout() > 0)
+  	{
+  		if(echoMode)
+  		  	return;
+
+  		if(LORAWAN_DEFAULT_CLASS == CLASS_A || LORAWAN_DEFAULT_CLASS == CLASS_B)
+  		{
+  			if(++rxTimeoutCnt >= 2)
+  				rxTimeoutCnt = 0;
+  			else
+  				return;	// jeszcze nie konczymy pomiaru
+  		}
+
+  		// to koniec tego pomiaru
+  		if (LORAWAN_DEFAULT_CONFIRMED_MSG_STATE == LORAMAC_HANDLER_UNCONFIRMED_MSG)
+		{
+			if (LORAWAN_DEFAULT_CLASS != CLASS_C)
+			{
+				rxTimestamp = HAL_GetTick();
+				Collection[ConfigurationNum].Measurements[MeasurementNum].RoundTripTime = rxTimestamp - txTimestamp;
+				Collection[ConfigurationNum].PacketsReceived++;
+				APP_LOG(TS_ON, VLEVEL_M, "App RX timeout\n\r");
+			}
+		}
+		else
+		{
+			Collection[ConfigurationNum].Measurements[MeasurementNum].ErrorCode = ERROR_TIMEOUT_RX;
+			APP_LOG(TS_ON, VLEVEL_M, "App RX timeout on conf\n\r");
+		}
+
+  		nextMeasurement(1);
+  	}
+  	else
+  	{
+  		APP_LOG(TS_ON, VLEVEL_M, "No app RX timeout\n\r");
+  	}
 
   /* USER CODE END OnMacProcessNotify_2 */
 }

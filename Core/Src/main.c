@@ -93,6 +93,7 @@ int main(void)
 	MX_SUBGHZ_Init();
 
 	setvbuf(stdout, NULL, _IONBF, 0); // no buffering printf
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET); // LED off
   /* USER CODE END 2 */
 
   /* Infinite loop */

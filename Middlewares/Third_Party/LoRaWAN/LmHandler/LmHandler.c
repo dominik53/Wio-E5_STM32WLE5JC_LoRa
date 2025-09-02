@@ -2133,3 +2133,14 @@ LmHandlerErrorStatus_t LmHandlerNvmDataStore( void )
     return LORAMAC_HANDLER_ERROR;
 #endif /* CONTEXT_MANAGEMENT_ENABLED */
 }
+
+
+uint8_t lmHandler_getRxTimeout(void)
+{
+	return mac_getRxTimeout();
+}
+
+void lmHandler_setRxTimeout(uint8_t value)
+{
+	mac_setRxTimeout(value);
+}

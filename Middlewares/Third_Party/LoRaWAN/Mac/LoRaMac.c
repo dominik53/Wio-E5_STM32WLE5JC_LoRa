@@ -56,6 +56,7 @@
 
 #include "LoRaMac.h"
 #include "mw_log_conf.h"
+#include "lora_app.h"
 
 #if (defined( LORAMAC_VERSION ) && (( LORAMAC_VERSION == 0x01000300 ) || ( LORAMAC_VERSION == 0x01000400 ) || ( LORAMAC_VERSION == 0x01010100 )))
 #else
@@ -984,7 +985,6 @@ static void OnRadioRxError( void )
     LoRaMacRadioEvents.Events.RxError = 1;
 
     OnMacProcessNotify( );
-    MW_LOG(TS_ON, VLEVEL_M, "MAC rxError\r\n" );
 }
 
 static void OnRadioRxTimeout( void )
@@ -993,6 +993,22 @@ static void OnRadioRxTimeout( void )
 
     OnMacProcessNotify( );
     MW_LOG(TS_ON, VLEVEL_M, "MAC rxTimeOut\r\n" );
+}
+
+uint8_t mac_getRxTimeout(void)
+{
+	if(LoRaMacRadioEvents.Events.RxTimeout > 0)
+		return 1;
+	else
+		return 0;
+}
+
+void mac_setRxTimeout(uint8_t value)
+{
+	if(value > 0)
+		LoRaMacRadioEvents.Events.RxTimeout = 1;
+	else
+		LoRaMacRadioEvents.Events.RxTimeout = 0;
 }
 
 static void UpdateRxSlotIdleState( void )
@@ -2572,9 +2588,11 @@ static LoRaMacCryptoStatus_t GetFCntDown( AddressIdentifier_t addrID, FType_t fT
 }
 #endif /* LORAMAC_VERSION */
 
+#define APP_LOG(TS,VL,...)   do{ {UTIL_ADV_TRACE_COND_FSend(VL, T_REG_OFF, TS, __VA_ARGS__);} }while(0);
 static LoRaMacStatus_t SwitchClass( DeviceClass_t deviceClass )
 {
-    LoRaMacStatus_t status = LORAMAC_STATUS_PARAMETER_INVALID;
+	APP_LOG(TS_OFF, VLEVEL_M, "**** current class: %d, switch to: %d ****\r\n", Nvm.MacGroup2.DeviceClass, deviceClass);
+	LoRaMacStatus_t status = LORAMAC_STATUS_PARAMETER_INVALID;
 
     switch( Nvm.MacGroup2.DeviceClass )
     {
@@ -3440,7 +3458,8 @@ static LoRaMacStatus_t SendReJoinReq( JoinReqIdentifier_t joinReqType )
 #endif /* LORAMAC_VERSION */
         case JOIN_REQ:
         {
-            SwitchClass( CLASS_A );
+            SwitchClass( LORAWAN_DEFAULT_CLASS ); // bylo class_a
+//        	SwitchClass(Nvm.MacGroup2.DeviceClass);
 
             MacCtx.TxMsg.Type = LORAMAC_MSG_TYPE_JOIN_REQUEST;
             MacCtx.TxMsg.Message.JoinReq.Buffer = MacCtx.PktBuffer;
@@ -4637,7 +4656,7 @@ LoRaMacStatus_t LoRaMacInitialization( LoRaMacPrimitives_t* primitives, LoRaMacC
 
     // Init parameters which are not set in function ResetMacParameters
     Nvm.MacGroup2.MacParamsDefaults.ChannelsNbTrans = 1;
-    Nvm.MacGroup2.MacParamsDefaults.SystemMaxRxError = 100; // bylo 10, 100 NAPRAWILO PROBLEM
+    Nvm.MacGroup2.MacParamsDefaults.SystemMaxRxError = 150;
     Nvm.MacGroup2.MacParamsDefaults.MinRxSymbols = 6;
 
     Nvm.MacGroup2.MacParams.SystemMaxRxError = Nvm.MacGroup2.MacParamsDefaults.SystemMaxRxError;
@@ -5780,7 +5799,7 @@ LoRaMacStatus_t LoRaMacMibSetRequestConfirm( MibRequestConfirm_t* mibSet )
 #if (defined( LORAMAC_VERSION ) && (( LORAMAC_VERSION == 0x01000400 ) || ( LORAMAC_VERSION == 0x01010100 )))
             if( mibSet->Param.SystemMaxRxError <= 500 )
             { // Only apply the new value if in range 0..500 ms else keep current value.
-//            	Nvm.MacGroup2.MacParams.SystemMaxRxError = Nvm.MacGroup2.MacParamsDefaults.SystemMaxRxError = mibSet->Param.SystemMaxRxError; // todo
+//                Nvm.MacGroup2.MacParams.SystemMaxRxError = Nvm.MacGroup2.MacParamsDefaults.SystemMaxRxError = mibSet->Param.SystemMaxRxError;
             }
             else
             {

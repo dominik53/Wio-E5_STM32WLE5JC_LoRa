@@ -40,13 +40,6 @@
 #include "radio_conf.h"
 #include "mw_log_conf.h"
 
-
-#define RADIO_LOG_DEBUG 0
-
-#if RADIO_LOG_DEBUG == 1
-#include "sys_app.h"
-#endif
-
 /* Private typedef -----------------------------------------------------------*/
 /*!
  * Radio hardware and global parameters
@@ -872,10 +865,6 @@ static void RadioSetRxConfig( RadioModems_t modem, uint32_t bandwidth,
                               bool crcOn, bool freqHopOn, uint8_t hopPeriod,
                               bool iqInverted, bool rxContinuous )
 {
-#if RADIO_LOG_DEBUG == 1
-	APP_LOG(TS_OFF, VLEVEL_M, "RadioSetRxConfig, bandwidth: %d, datarate: %d, coderate: %d, preambleLen: %d, symbTimeout: %d, fixLen: %s, payloadLen: %d, crcOn: %s, freqHopOn: %s, iqInverted: %s, rxContinuous: %s\n\r", bandwidth, datarate, coderate, preambleLen, symbTimeout, fixLen ? "true" : "false", payloadLen, crcOn ? "true" : "false", freqHopOn ? "true" : "false", iqInverted ? "true" : "false", rxContinuous ? "true" : "false");
-#endif
-
 #if (RADIO_SIGFOX_ENABLE == 1)
     uint8_t modReg;
 #endif
@@ -1469,10 +1458,6 @@ static void RadioStandby( void )
 
 static void RadioRx( uint32_t timeout )
 {
-#if RADIO_LOG_DEBUG == 1
-	APP_LOG(TS_OFF, VLEVEL_M, "RadioRx, timeout: %d\n\r", timeout);
-#endif
-
 #if( RADIO_LR_FHSS_IS_ON == 1 )
     if( SubgRf.lr_fhss.is_lr_fhss_on == true )
     {
@@ -1515,10 +1500,6 @@ static void RadioRx( uint32_t timeout )
 
 static void RadioRxBoosted( uint32_t timeout )
 {
-#if RADIO_LOG_DEBUG == 1
-	APP_LOG(TS_OFF, VLEVEL_M, "RadioRxBoosted, timeout: %d\n\r", timeout);
-#endif
-
 #if( RADIO_LR_FHSS_IS_ON == 1 )
     if( SubgRf.lr_fhss.is_lr_fhss_on == true )
     {
@@ -1560,10 +1541,6 @@ static void RadioRxBoosted( uint32_t timeout )
 
 static void RadioSetRxDutyCycle( uint32_t rxTime, uint32_t sleepTime )
 {
-#if RADIO_LOG_DEBUG == 1
-	APP_LOG(TS_OFF, VLEVEL_M, "RadioSetRxDutyCycle, rxTime: %d, sleepTime: %d\n\r", rxTime, sleepTime);
-#endif
-
     /*See STM32WL Errata: RadioSetRxDutyCycle*/
     SubgRf.RxDcPreambleDetectTimeout = 2 * rxTime + sleepTime;
     /*Enable also the IRQ_PREAMBLE_DETECTED*/

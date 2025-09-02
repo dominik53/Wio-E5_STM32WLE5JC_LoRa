@@ -44,7 +44,7 @@ extern "C" {
 
 /* Exported Includes --------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "app_config.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -89,8 +89,11 @@ extern "C" {
  * End-device IEEE EUI (big endian)
  * When set to 00,00,00,00,00,00,00,00 DevEui is automatically set with a value provided by MCU platform
  */
+#if LORA_DIRECTION == LORA_TRANSMITER
 #define LORAWAN_DEVICE_EUI                                 10,20,30,40,50,60,70,80
-
+#else
+#define LORAWAN_DEVICE_EUI                                 20,30,40,50,60,70,80,90
+#endif
 /*!
  * App/Join server IEEE EUI (big endian)
  */
@@ -102,6 +105,8 @@ extern "C" {
  */
 #define LORAWAN_DEVICE_ADDRESS                             00,00,00,00
 
+
+#if LORA_DIRECTION == LORA_TRANSMITER
 /*!
  * Application root key
  */
@@ -121,6 +126,13 @@ extern "C" {
  * Application session key
  */
 #define LORAWAN_APP_S_KEY                                  2B,7E,15,16,28,AE,D2,A6,AB,F7,15,88,09,CF,4F,3C
+
+#else
+#define LORAWAN_APP_KEY                                    2B,7E,15,16,28,AE,D2,A6,AB,F7,15,88,09,CF,4F,3D
+#define LORAWAN_NWK_KEY                                    2B,7E,15,16,28,AE,D2,A6,AB,F7,15,88,09,CF,4F,3D
+#define LORAWAN_NWK_S_KEY                                  2B,7E,15,16,28,AE,D2,A6,AB,F7,15,88,09,CF,4F,3D
+#define LORAWAN_APP_S_KEY                                  2B,7E,15,16,28,AE,D2,A6,AB,F7,15,88,09,CF,4F,3D
+#endif
 
 /*!
  * Format commissioning keys
