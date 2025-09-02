@@ -92,7 +92,7 @@ static const char *slotStrings[] = { "1", "2", "C", "C_MC", "P", "P_MC" };
 
 #define MAX_PHY_PAYLOAD_LEN	255
 #define TX_RETRY_PERIOD	100
-#define MEASUREMENT_PERIOD	5000
+#define MEASUREMENT_PERIOD	12000	// ile czakamy na nastepny cykl tx-rx
 #define CONFIGURATIONS_NUM	1
 
 typedef enum
@@ -575,7 +575,7 @@ static void OnRxData(LmHandlerAppData_t *appData, LmHandlerRxParams_t *params)
 								rxTimestamp = HAL_GetTick();
 								Collection[ConfigurationNum].Measurements[MeasurementNum].RoundTripTime = rxTimestamp - txTimestamp;
 								Collection[ConfigurationNum].PacketsReceived++;
-
+								APP_LOG(TS_ON, VLEVEL_M, "### OnRx ###\n\r");
 								receivedNode2Frame = 1;
 								if (appData->BufferSize <= APP_PAYLOAD_LEN)
 								{
@@ -685,12 +685,16 @@ static void SendTxData(void)
 		if(startMeasurements)
 			waitingForNode2rx = 1;
 
+		UTIL_TIMER_Start(&measurementTimer);
+		APP_LOG(TS_ON, VLEVEL_M, "### OnTimerStart ###\n\r");
+
 		MeasurementNum++;
 		txTimestamp = HAL_GetTick();
 		status = LmHandlerSend(&AppData, LmHandlerParams.IsTxConfirmed, false);
 		if (LORAMAC_HANDLER_SUCCESS == status)
 		{
-			APP_LOG(TS_ON, VLEVEL_M, "SEND REQUEST\r\n");
+//			APP_LOG(TS_ON, VLEVEL_M, "SEND REQUEST\r\n");
+			APP_LOG(TS_ON, VLEVEL_M, "### OnTx ###\n\r");
 		}
 		else if (LORAMAC_HANDLER_DUTYCYCLE_RESTRICTED == status)
 		{
@@ -712,7 +716,8 @@ static void SendTxData(void)
 			APP_LOG(TS_ON, VLEVEL_M, "LmHandler is busy!!!!!\r\n");
 		}
 
-		UTIL_TIMER_Start(&TxRetryTimer);
+		if(!waitingForNode2rx)
+			UTIL_TIMER_Start(&TxRetryTimer);
 	}
 
   /* USER CODE END SendTxData_1 */
@@ -811,14 +816,17 @@ static void OnTxRetryTimerEvent(void *context)
 static void OnMeasurementTimerEvent(void *context)
 {
 	// start timer, w obsludze sprawdzmy czy przyszla wiadomosc, jesli nie to errorCode timeout i next, jesli tak to next
+	APP_LOG(TS_ON, VLEVEL_M, "### OnMeasurementTimer ###\n\r");
 	waitingForNode2rx = 0;
 
 	if(receivedNode2Frame)
 	{
 		receivedNode2Frame = 0;
+		APP_LOG(TS_OFF, VLEVEL_M, "Frame received\n\r");
 	}
 	else
 	{
+		APP_LOG(TS_OFF, VLEVEL_M, "Frame not received\n\r");
 		Collection[ConfigurationNum].Measurements[MeasurementNum].ErrorCode = ERROR_TIMEOUT_RX;
 	}
 
@@ -881,6 +889,7 @@ static void nextMeasurement(uint8_t incMeasurement)
 	// zlecamy kolejny pomiar (w przypadku problemow z wczesniejszym zleceniem)
 	if(incMeasurement == 0)
 	{
+		APP_LOG(TS_ON, VLEVEL_M, "### OnNextMeasurement0 ###\n\r");
 		UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_LoRaSendOnTxTimerOrButtonEvent), CFG_SEQ_Prio_0);
 		return;
 	}
@@ -912,11 +921,7 @@ static void nextMeasurement(uint8_t incMeasurement)
 				startMeasurements = 1;
 			}
 
-			if(!waitingForNode2rx) // zaczynamy pomiar
-			{
-				UTIL_TIMER_Start(&measurementTimer);
-			}
-			else // pomiar w trakcie, czekamy
+			if(waitingForNode2rx) // pomiar w trakcie, czekamy
 			{
 				return;
 			}

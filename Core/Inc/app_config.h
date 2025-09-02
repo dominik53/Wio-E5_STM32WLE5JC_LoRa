@@ -16,7 +16,7 @@
 
 /************ APP CONFIGURATION ************/
 /*******************************************/
-#define LORA_DIRECTION LORA_RECEIVER	// which of the two devices I am
+#define LORA_DIRECTION LORA_TRANSMITER	// which of the two devices I am
 
 //MAX APP PAYLOAD
 //DR0 = 23
@@ -29,7 +29,7 @@
 #define MEASUREMENTS_NUM	50	// how many repetitions
 
 
-#define APP_LOG_EVENTS_ENABLED		1 // log on app events
+#define APP_LOG_EVENTS_ENABLED		0 // log on app events
 #define APP_LOG_SOFTWARE_ENABLED	0 // log software on app init
 
 /*******************************************/

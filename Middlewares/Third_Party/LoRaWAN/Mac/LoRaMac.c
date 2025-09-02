@@ -57,6 +57,7 @@
 #include "LoRaMac.h"
 #include "mw_log_conf.h"
 #include "lora_app.h"
+#include "app_config.h"
 
 #if (defined( LORAMAC_VERSION ) && (( LORAMAC_VERSION == 0x01000300 ) || ( LORAMAC_VERSION == 0x01000400 ) || ( LORAMAC_VERSION == 0x01010100 )))
 #else
@@ -4656,7 +4657,13 @@ LoRaMacStatus_t LoRaMacInitialization( LoRaMacPrimitives_t* primitives, LoRaMacC
 
     // Init parameters which are not set in function ResetMacParameters
     Nvm.MacGroup2.MacParamsDefaults.ChannelsNbTrans = 1;
+
+#if LORA_DIRECTION == LORA_TRANSMITER
+    Nvm.MacGroup2.MacParamsDefaults.SystemMaxRxError = 110;
+#else
     Nvm.MacGroup2.MacParamsDefaults.SystemMaxRxError = 150;
+#endif
+
     Nvm.MacGroup2.MacParamsDefaults.MinRxSymbols = 6;
 
     Nvm.MacGroup2.MacParams.SystemMaxRxError = Nvm.MacGroup2.MacParamsDefaults.SystemMaxRxError;
