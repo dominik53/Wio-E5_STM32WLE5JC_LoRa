@@ -19,13 +19,13 @@
 #define LORA_DIRECTION LORA_TRANSMITER	// which of the two devices I am
 
 //MAX APP PAYLOAD
-//DR0 = 23
-//DR1 = 23
-//DR2 = 23
-//DR3 = 87
-//DR4 = 194
-//DR5 = 194
-#define APP_PAYLOAD_LEN		23	// ile bajtow danych przesylamy
+//DR0 = 51	\	23	/ 51
+//DR1 = 51	\	23	/ 51
+//DR2 = 51	\	23	/ 51
+//DR3 = 115	\	87	/ 51
+//DR4 = 222	\	194	/ 51
+//DR5 = 222	\	194	/ 51
+#define APP_PAYLOAD_LEN		222	// ile bajtow danych przesylamy
 #define MEASUREMENTS_NUM	50	// how many repetitions
 
 

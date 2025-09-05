@@ -92,7 +92,8 @@ static const char *slotStrings[] = { "1", "2", "C", "C_MC", "P", "P_MC" };
 
 #define MAX_PHY_PAYLOAD_LEN	255
 #define TX_RETRY_PERIOD	100
-#define MEASUREMENT_PERIOD	12000	// ile czakamy na nastepny cykl tx-rx
+#define MEASUREMENT_PERIOD	16000	// ile czakamy na nastepny cykl tx-rx
+#define FIRST_MEASUREMENT_PERIOD	60000	// pierwszy raz czekamy dluzej zeby join i ustalanie RXC zeszlo z kolejki
 #define CONFIGURATIONS_NUM	1
 
 typedef enum
@@ -135,6 +136,7 @@ static uint8_t echoMode = 0;	// only send echo to gate
 static uint8_t startMeasurements = 0; // LORA_TRANSMITER flag to start measuring
 static uint8_t waitingForNode2rx = 0;	// czekamy na odp z drugiego urzadzenia
 static uint8_t receivedNode2Frame = 0;	// czy dostalismy odp z node
+static uint8_t firstMeasurement = 1;	// wykkonujemy pierwszy pomiar
 
 #if LORA_DIRECTION == LORA_RECEIVER
 static uint8_t txPending = 0;	// after rx for echo tx
@@ -411,7 +413,7 @@ void LoRaWAN_Init(void)
 
   /* USER CODE BEGIN LoRaWAN_Init_2 */
 	UTIL_TIMER_Create(&TxRetryTimer, TX_RETRY_PERIOD, UTIL_TIMER_ONESHOT, OnTxRetryTimerEvent, NULL);
-	UTIL_TIMER_Create(&measurementTimer, MEASUREMENT_PERIOD, UTIL_TIMER_ONESHOT, OnMeasurementTimerEvent, NULL);
+	UTIL_TIMER_Create(&measurementTimer, FIRST_MEASUREMENT_PERIOD, UTIL_TIMER_ONESHOT, OnMeasurementTimerEvent, NULL);
 
 	LmHandlerJoin(ActivationType, ForceRejoin);
 //    if(LORAWAN_DEFAULT_CLASS == CLASS_A)
@@ -683,12 +685,19 @@ static void SendTxData(void)
 		}
 
 		if(startMeasurements)
+		{
 			waitingForNode2rx = 1;
+			UTIL_TIMER_Start(&measurementTimer);
+		}
 
-		UTIL_TIMER_Start(&measurementTimer);
+
 		APP_LOG(TS_ON, VLEVEL_M, "### OnTimerStart ###\n\r");
 
-		MeasurementNum++;
+		if(firstMeasurement)
+			firstMeasurement = 0;
+		else
+			MeasurementNum++;
+
 		txTimestamp = HAL_GetTick();
 		status = LmHandlerSend(&AppData, LmHandlerParams.IsTxConfirmed, false);
 		if (LORAMAC_HANDLER_SUCCESS == status)
@@ -1107,8 +1116,8 @@ static void OnMacProcessNotify(void)
   		{
   			if(++rxTimeoutCnt >= 2)
   				rxTimeoutCnt = 0;
-  			else
-  				return;	// jeszcze nie konczymy pomiaru
+//  			else
+//  				return;	// jeszcze nie konczymy pomiaru
   		}
 
   		// to koniec tego pomiaru
