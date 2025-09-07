@@ -963,14 +963,15 @@ static void OnTxData(LmHandlerTxParams_t *params)
 	APP_LOG(TS_ON, VLEVEL_M, "OnTxData\n\r");
 #endif
 
-	txTimestampEnd = HAL_GetTick();
-	Collection[ConfigurationNum].Measurements[MeasurementNum].TxBitRate = (APP_PAYLOAD_LEN * 8 * 1000) / (txTimestampEnd - txTimestamp); // *8 -> byte to bit, *1000 -> ms to s
+	// tu byl bitrate
 
   if ((params != NULL))
   {
     /* Process Tx event only if its a mcps response to prevent some internal events (mlme) */
     if (params->IsMcpsConfirm != 0)
     {
+    	txTimestampEnd = HAL_GetTick();
+    	Collection[ConfigurationNum].Measurements[MeasurementNum].TxBitRate = (APP_PAYLOAD_LEN * 8 * 1000) / (txTimestampEnd - txTimestamp); // *8 -> byte to bit, *1000 -> ms to s
 //      APP_LOG(TS_OFF, VLEVEL_M, "\r\n###### ========== MCPS-Confirm =============\r\n");
       APP_LOG(TS_OFF, VLEVEL_H, "###### U/L FRAME:%04d | PORT:%d | DR:%d | PWR:%d", params->UplinkCounter,
               params->AppData.Port, params->Datarate, params->TxPower);

@@ -25,7 +25,7 @@
 //DR3 = 115	\	87	/ 51
 //DR4 = 222	\	194	/ 51
 //DR5 = 222	\	194	/ 51
-#define APP_PAYLOAD_LEN		222	// ile bajtow danych przesylamy
+#define APP_PAYLOAD_LEN		51	// ile bajtow danych przesylamy
 #define MEASUREMENTS_NUM	50	// how many repetitions
 
 
